@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = ["crates/nextm-metrics", "crates/nextm-render", "crates/nextm", "tools/xtask"]
+default-members = ["crates/nextm-metrics", "crates/nextm-render", "crates/nextm"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+windows-sys = "0.61"
+windows-link = "0.2"
+nextm-metrics = { path = "crates/nextm-metrics" }
+nextm-render = { path = "crates/nextm-render" }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "allow"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rust (versione da rust-toolchain.toml)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
+            $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'aarch64' } else { 'x86_64' }
+            Invoke-WebRequest "https://static.rust-lang.org/rustup/dist/$arch-pc-windows-msvc/rustup-init.exe" -OutFile rustup-init.exe
+            .\rustup-init.exe -y --default-toolchain none --profile minimal
+            "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+            $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+          }
+          rustup show
+
+      - name: Formattazione
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Build di release
+        run: cargo build --release -p nextm
+
+      - name: Controllo degli import (costo zero da spento, DLL solo da System32)
+        run: cargo run -p xtask -- check-imports target/release/nextm.exe
+
+      - name: Tetto sulla dimensione dell'eseguibile
+        run: cargo run -p xtask -- check-size target/release/nextm.exe --budget size-budget-${{ matrix.target }}.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextm-${{ matrix.target }}
+          path: target/release/nextm.exe

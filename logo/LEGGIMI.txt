@@ -1,0 +1,82 @@
+HAL / ECG — PACCHETTO ICONE WINDOWS
+Versione scelta: seconda proposta, con anello argentato ed ECG luminoso.
+
+DA USARE SUBITO
+ICO/hal_ecg_app.ico
+È il file principale per l'icona dell'applicazione. Contiene 21 immagini
+32 bit con trasparenza, nelle dimensioni seguenti (in pixel per lato):
+16, 20, 24, 28, 30, 32, 36, 40, 44, 48, 60, 64, 72, 80, 96, 128, 144, 192, 200, 224, 256.
+Non è necessario assegnare manualmente un file a ogni risoluzione: un file ICO
+può contenere più immagini e Windows seleziona quella adatta alla richiesta.
+
+PNG FEDELI ALL'IMMAGINE SCELTA
+PNG/hal_ecg_1024.png è il master di produzione a sfondo trasparente.
+I PNG e gli ICO derivano dall'immagine approvata, non dalla ricostruzione SVG.
+Ho eliminato i pixel di trasparenza residui lontani dall'icona, normalizzato
+l'opacità interna e ricentrato il disegno senza deformarlo. Il master 1024 è
+un ritaglio della sorgente: il disegno non è stato ingrandito per crearlo.
+Le dimensioni più piccole sono state ottenute mediante ricampionamento Lanczos
+con alpha premoltiplicato, non con un ridisegno semplificato per ciascuna taglia.
+
+Le 42 dimensioni quadrate della cartella PNG sono:
+16, 20, 24, 28, 30, 32, 36, 40, 44, 48, 50, 55, 60, 63, 64, 66, 72, 75, 80, 88, 96, 100, 128, 144, 150, 176, 180, 188, 192, 200, 224, 225, 256, 300, 310, 384, 400, 512, 600, 620, 768, 1024.
+
+SVG: DUE FILE CON SCOPI DIVERSI
+1. SVG/hal_ecg_vettoriale.svg
+   Ricostruzione interamente vettoriale: tracciati, gradienti e filtri per il
+   bagliore. Nessun PNG o altra immagine raster incorporata. Gli elementi
+   principali hanno gruppi identificabili: metal-bezel, glass-lens,
+   glass-reflections, ecg-glow, ecg-line.
+   Non è una copia pixel per pixel: sfumature, riflessi e bagliore differiscono
+   leggermente dall'immagine generata originale. Il confronto è in
+   Anteprime/confronto_PNG_SVG.png.
+
+2. SVG/hal_ecg_fedele_PNG_incorporato.svg
+   Contiene il PNG di produzione incorporato e mantiene esattamente il suo
+   aspetto. È un contenitore SVG con contenuto raster, NON un vero vettoriale.
+   Ingrandirlo non aggiunge dettagli all'immagine incorporata.
+
+PNG AD ALTA RISOLUZIONE DAL VETTORIALE
+PNG_da_SVG/hal_ecg_vettoriale_2048.png
+PNG_da_SVG/hal_ecg_vettoriale_4096.png
+Sono render dell'SVG vettoriale, non ingrandimenti del PNG originale.
+La versione 1024 del vettoriale è in Anteprime/hal_ecg_vettoriale_1024.png.
+Tutti questi render mantengono lo sfondo trasparente.
+
+ALTRE ICONE WINDOWS
+ICO/Singole/ contiene un ICO per ciascuna delle 21 dimensioni elencate sopra.
+ICO/hal_ecg_standard.ico contiene solo 16, 24, 32, 48, 64, 128 e 256 pixel.
+Il file principale aggiunge le taglie intermedie per ridurre il ricampionamento.
+Le risorse ICO sono DIB/BGRA 32 bit per le taglie fino a 128 pixel e PNG RGBA
+per le taglie da 144 pixel in su; i DIB includono anche la maschera AND.
+
+ASSET PER APPLICAZIONI WINDOWS CON PACCHETTO MSIX
+Windows_MSIX/Assets/ contiene Square44x44Logo, Square150x150Logo e StoreLogo
+alle scale 100, 125, 150, 200 e 400, più le varianti targetsize dell'icona
+con suffissi predefinito, unplated e lightunplated.
+Le tre varianti di tema usano la stessa grafica trasparente: non sono
+rielaborazioni cromatiche diverse. Sono risorse opzionali, da collegare al
+manifest della propria applicazione; non costituiscono un pacchetto MSIX.
+Leggere Windows_MSIX/LEGGIMI.txt per i nomi dei file di riferimento.
+
+ANTEPRIME E SORGENTE
+Anteprime/anteprima_chiaro_scuro.png: icona scelta su sfondo chiaro/scuro,
+con campioni a dimensioni native. Aprire al 100% per valutarli a grandezza reale.
+Anteprime/confronto_PNG_SVG.png: immagine scelta e ricostruzione a confronto.
+Originale/immagine_scelta_1254.png: il file fornito, conservato senza modifiche.
+
+VERIFICHE
+Tutti gli ICO sono stati riaperti; ogni frame RGBA è stato confrontato pixel
+per pixel con il PNG della stessa taglia. Tutte le dimensioni sono presenti.
+L'SVG vettoriale è XML valido e non contiene elementi <image> né bitmap.
+I PNG trasparenti e i render SVG sono stati riaperti e ispezionati.
+Non è stato effettuato un test del pacchetto all'interno di un'app Windows.
+MANIFEST.json elenca i file con dimensioni e hash SHA-256.
+
+RIFERIMENTI TECNICI
+Microsoft — Construct your Windows app's icon:
+https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction
+Microsoft — About Icons:
+https://learn.microsoft.com/en-us/windows/win32/menurc/about-icons
+Pillow — Implementazione e lettura del formato ICO:
+https://pillow.readthedocs.io/en/stable/_modules/PIL/IcoImagePlugin.html

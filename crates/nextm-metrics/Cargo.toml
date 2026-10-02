@@ -1,0 +1,33 @@
+[package]
+name = "nextm-metrics"
+description = "Motore delle metriche di nextm: calcoli puri e campionatori di sistema"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-link = { workspace = true }
+# Le feature di rete e di PerfLib servono solo per TIPI e COSTANTI: le funzioni di iphlpapi e
+# advapi32 si risolvono con GetProcAddress (sys/dll.rs) quando la metrica viene attivata.
+# Riferirle direttamente creerebbe un import statico, vietato da `cargo xtask check-imports`.
+windows-sys = { workspace = true, features = [
+    "Wdk_System_SystemInformation",
+    "Win32_Foundation",
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Performance",
+    "Win32_System_Services",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
+] }

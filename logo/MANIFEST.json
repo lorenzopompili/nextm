@@ -1,0 +1,1321 @@
+{
+  "name": "HAL ECG IconPack",
+  "chosen_design": 2,
+  "raster_master": "PNG/hal_ecg_1024.png",
+  "main_ico": "ICO/hal_ecg_app.ico",
+  "png_sizes": [
+    16,
+    20,
+    24,
+    28,
+    30,
+    32,
+    36,
+    40,
+    44,
+    48,
+    50,
+    55,
+    60,
+    63,
+    64,
+    66,
+    72,
+    75,
+    80,
+    88,
+    96,
+    100,
+    128,
+    144,
+    150,
+    176,
+    180,
+    188,
+    192,
+    200,
+    224,
+    225,
+    256,
+    300,
+    310,
+    384,
+    400,
+    512,
+    600,
+    620,
+    768,
+    1024
+  ],
+  "ico_sizes": [
+    16,
+    20,
+    24,
+    28,
+    30,
+    32,
+    36,
+    40,
+    44,
+    48,
+    60,
+    64,
+    72,
+    80,
+    96,
+    128,
+    144,
+    192,
+    200,
+    224,
+    256
+  ],
+  "files": [
+    {
+      "path": "Anteprime/anteprima_chiaro_scuro.png",
+      "bytes": 217417,
+      "sha256": "910494941ee237476d4d279866e22470e7dbbb913998075cefa67f1fece5517e",
+      "width": 1200,
+      "height": 810,
+      "mode": "RGB"
+    },
+    {
+      "path": "Anteprime/confronto_PNG_SVG.png",
+      "bytes": 476076,
+      "sha256": "b6f92fd173434e9dbef4f9bd68e5afd413f520c115067f48dfc9084da0a1ae95",
+      "width": 1200,
+      "height": 660,
+      "mode": "RGB"
+    },
+    {
+      "path": "Anteprime/hal_ecg_vettoriale_1024.png",
+      "bytes": 549719,
+      "sha256": "81bf5d4d4d0f063f9973e81424e5f3ad440ab5279834e605980a40289ee0a41e",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Anteprime/index.html",
+      "bytes": 4914,
+      "sha256": "aac9c6257a5ab6e334dd0a834ef1102552fa0d9ce5a805eaf41ee7ec5c6d1f04"
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_128.ico",
+      "bytes": 67646,
+      "sha256": "9a3a27a7e71449f0dc7c7e41bbbc66bb1f4c1ba6601560a054890d797ea1488c",
+      "frames": [
+        [
+          128,
+          128
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_144.ico",
+      "bytes": 27746,
+      "sha256": "a1838c9bbe54c448f7ba991cdce20fc5596ddc628b930afeafc502e0de9b99d7",
+      "frames": [
+        [
+          144,
+          144
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_16.ico",
+      "bytes": 1150,
+      "sha256": "42e1ccf8ef8f6faacc8cf5640a010d41614e38b4fae8848ddd4440c205f2e272",
+      "frames": [
+        [
+          16,
+          16
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_192.ico",
+      "bytes": 43886,
+      "sha256": "6c588eae405c5d1f46fa7e31c2da2c02b67f621d073081fad282c5da3f8d4b95",
+      "frames": [
+        [
+          192,
+          192
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_20.ico",
+      "bytes": 1742,
+      "sha256": "dcab829b5fb13f990713df7d04d3eb98f189250f7d926f756b9bbdb168fc45b3",
+      "frames": [
+        [
+          20,
+          20
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_200.ico",
+      "bytes": 46946,
+      "sha256": "b4080dd217cc38b219a7486b0e776de006ce2fe659c673c2ab171540f0ea9804",
+      "frames": [
+        [
+          200,
+          200
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_224.ico",
+      "bytes": 56668,
+      "sha256": "c23d409df336a5c4bb8a5b582d104828e8a9a3bbaf7bdfb4cec7551de03af62d",
+      "frames": [
+        [
+          224,
+          224
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_24.ico",
+      "bytes": 2462,
+      "sha256": "e7ba31dab4c2b7b9e1f80e84e539cc4f0c4b9067200f6a7a34040df3d8042b07",
+      "frames": [
+        [
+          24,
+          24
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_256.ico",
+      "bytes": 70873,
+      "sha256": "573546426f5fb453af5bf03f53f648c36d51cfb06d5ef580709488d72dccd548",
+      "frames": [
+        [
+          256,
+          256
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_28.ico",
+      "bytes": 3310,
+      "sha256": "f7e3102b7a2a4407774f2291067eacb024aef2e1c078732e0242145f928559d6",
+      "frames": [
+        [
+          28,
+          28
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_30.ico",
+      "bytes": 3782,
+      "sha256": "725ca4f2385a23535021d568ad5458f89ae50b0dd363a101f3a1493987652097",
+      "frames": [
+        [
+          30,
+          30
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_32.ico",
+      "bytes": 4286,
+      "sha256": "a6426d08ed88737980ddbe7b99adee3d50b3ecccaa597066017dce8364f786d2",
+      "frames": [
+        [
+          32,
+          32
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_36.ico",
+      "bytes": 5534,
+      "sha256": "dfc608bb0854af4ac11ebf878fde39a9ce35e384840d0136da8df81ceaa9dc77",
+      "frames": [
+        [
+          36,
+          36
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_40.ico",
+      "bytes": 6782,
+      "sha256": "d8e1734e1e2bfe756a8d5021f1392da334a9095907eb7f4b167ff9a7f87cfcf8",
+      "frames": [
+        [
+          40,
+          40
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_44.ico",
+      "bytes": 8158,
+      "sha256": "5d7cfd171a0e251785a4939710c60c9c7387348f73286f48e1f97464aa0abf6f",
+      "frames": [
+        [
+          44,
+          44
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_48.ico",
+      "bytes": 9662,
+      "sha256": "155b689bed93f6522727dc9ee97cd8a74177754a9faf04c2ecffaffd1d2d491c",
+      "frames": [
+        [
+          48,
+          48
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_60.ico",
+      "bytes": 14942,
+      "sha256": "bf7a4d7ce69ff02d86f704713f860b356c4f145d13b4d8dd7b56c223a90b4311",
+      "frames": [
+        [
+          60,
+          60
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_64.ico",
+      "bytes": 16958,
+      "sha256": "50ce98ba2079ddea9e1bc03cf4b6d651596a034391c5761248be1401e79c0375",
+      "frames": [
+        [
+          64,
+          64
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_72.ico",
+      "bytes": 21662,
+      "sha256": "ad001ccf797187ca9d1a18c0ed92acc97545df54829be10e016ab309b899af30",
+      "frames": [
+        [
+          72,
+          72
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_80.ico",
+      "bytes": 26622,
+      "sha256": "f4cdc8ed4b2b8f7a64ad036a56d04f7d33acaae8120b46fb69e1837a1d3e516a",
+      "frames": [
+        [
+          80,
+          80
+        ]
+      ]
+    },
+    {
+      "path": "ICO/Singole/hal_ecg_96.ico",
+      "bytes": 38078,
+      "sha256": "9acd053bcff51888c54cc49066b5ec6eb2e384dbe92a6863485bebf64a2ebb77",
+      "frames": [
+        [
+          96,
+          96
+        ]
+      ]
+    },
+    {
+      "path": "ICO/hal_ecg_app.ico",
+      "bytes": 478775,
+      "sha256": "15d4876acc3dccbbb2d2cd2b3624ba8afd612eb2c0bb0fddfed6d2f801b41808",
+      "frames": [
+        [
+          16,
+          16
+        ],
+        [
+          20,
+          20
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          28,
+          28
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          44,
+          44
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          72,
+          72
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          144,
+          144
+        ],
+        [
+          192,
+          192
+        ],
+        [
+          200,
+          200
+        ],
+        [
+          224,
+          224
+        ],
+        [
+          256,
+          256
+        ]
+      ]
+    },
+    {
+      "path": "ICO/hal_ecg_standard.ico",
+      "bytes": 173001,
+      "sha256": "762c2964c4067973b8dde0870505501ec6701638185d901c7b7cd3ce3f921e2f",
+      "frames": [
+        [
+          16,
+          16
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          256,
+          256
+        ]
+      ]
+    },
+    {
+      "path": "LEGGIMI.txt",
+      "bytes": 4562,
+      "sha256": "fc043b2463efc211f816c928462957b83561c7c41a3a1ac6d7e7d8e63fa8ca4f"
+    },
+    {
+      "path": "Originale/immagine_scelta_1254.png",
+      "bytes": 1115741,
+      "sha256": "feffe6429e5683b7cd6259fe73408e03c95f5da1c24df787016de04632637e7b",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_100.png",
+      "bytes": 15691,
+      "sha256": "29ed8ba87f0ac77838dc87f5b86db787b49fb42bb24f34d3ff185a99751868c5",
+      "width": 100,
+      "height": 100,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_1024.png",
+      "bytes": 734387,
+      "sha256": "67e1abbad86d06b7bbf7d0c9e0fabf14fd489539f06f2868379164342a7d6547",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_128.png",
+      "bytes": 23253,
+      "sha256": "876c72b0c9e8a52601410924f387fb891213f85b1932ff22c562cd4eef5eb190",
+      "width": 128,
+      "height": 128,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_144.png",
+      "bytes": 27724,
+      "sha256": "01ab52a01209fb7b221491f70d9bc664b721c1ad91e0a4d410b65f62daaef4f3",
+      "width": 144,
+      "height": 144,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_150.png",
+      "bytes": 29541,
+      "sha256": "6be39ee50c9e05f451419c599712d0ae0ecab4755cb604739c7b98bd5aab25de",
+      "width": 150,
+      "height": 150,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_16.png",
+      "bytes": 849,
+      "sha256": "d5910539d42ee54d81fc23efddab21005a0c672d7fc44088d240727907e07506",
+      "width": 16,
+      "height": 16,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_176.png",
+      "bytes": 38019,
+      "sha256": "1be4c054aaf439c9b04bbd6abdab04cc3f6818bf42b727111fa6025a5fc31e98",
+      "width": 176,
+      "height": 176,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_180.png",
+      "bytes": 39405,
+      "sha256": "adb544c15d00849cfc8e05c42f70d55aba1ecebb321f0966180804c6c713bda1",
+      "width": 180,
+      "height": 180,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_188.png",
+      "bytes": 42292,
+      "sha256": "60d5a1be2ac1bb2ac81452c4dac5034ac1f22eb6fdaca24a86673ff4b238a826",
+      "width": 188,
+      "height": 188,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_192.png",
+      "bytes": 43864,
+      "sha256": "8261e656d780cdf94321670d4fa3a93f36565dcd15435a4562f6a8d87e53e96d",
+      "width": 192,
+      "height": 192,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_20.png",
+      "bytes": 1216,
+      "sha256": "d2ff7389d867190c5257059a72ea87d01c726150a1b1c12ad5e60b259ae77fa0",
+      "width": 20,
+      "height": 20,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_200.png",
+      "bytes": 46924,
+      "sha256": "817cb2f2b66de93a2a3039e522f4c7efb865103578ffe81e6fb98b0de2f45fdd",
+      "width": 200,
+      "height": 200,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_224.png",
+      "bytes": 56646,
+      "sha256": "c044c5e328fb078a5d5960f23940439025102cafc404a28e0c3b41cb84c57d96",
+      "width": 224,
+      "height": 224,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_225.png",
+      "bytes": 56878,
+      "sha256": "77ccc5f58c1b2c059e75cfe7704095a66e7dec12477aafd80204fdc590432332",
+      "width": 225,
+      "height": 225,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_24.png",
+      "bytes": 1576,
+      "sha256": "bf1f94d176f71f56456614f11a1e4ee1c693093b9afdee103824a33a7e35a97e",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_256.png",
+      "bytes": 70851,
+      "sha256": "cf5e8d07a8e49aed13e36cc3e818e1d798eb5e60ec51d6babb6f3128c881d2c8",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_28.png",
+      "bytes": 2039,
+      "sha256": "c158377a6ce0b9220df27b993b29d6fcf6efd947013367eadae580b2859bd6c2",
+      "width": 28,
+      "height": 28,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_30.png",
+      "bytes": 2320,
+      "sha256": "59788b46d5669968c43e7a8b25e61d26905202d790c1bcbb55358cf9ed203ad7",
+      "width": 30,
+      "height": 30,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_300.png",
+      "bytes": 92580,
+      "sha256": "85b85843bd18f591ae831dd8afc3f8cd18b5adb8bbea584aeeaba10d4d5c251d",
+      "width": 300,
+      "height": 300,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_310.png",
+      "bytes": 97645,
+      "sha256": "38f954b80a53699c22c888d79e10b6a909d253402163a4c9b0f81708947144b9",
+      "width": 310,
+      "height": 310,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_32.png",
+      "bytes": 2590,
+      "sha256": "d61cb55cea90901e1f3f07b933c85929acd363e0ca47b5e0dc9eeb352d406c72",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_36.png",
+      "bytes": 3126,
+      "sha256": "ca019a329932a82ecb8fca48801d53e894ff1c39e781e8bb4b381f8df761eb6e",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_384.png",
+      "bytes": 140143,
+      "sha256": "e6dafa22802d0176b0f57be3946a43a20f5c878f87ce419ac310cf52e7ae4fe5",
+      "width": 384,
+      "height": 384,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_40.png",
+      "bytes": 3634,
+      "sha256": "0dbfb7043d1cc8596e10464523691387c0ea1151ad47b1a8e1045b08add0e888",
+      "width": 40,
+      "height": 40,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_400.png",
+      "bytes": 149681,
+      "sha256": "c85e149b109c68a302f934692991f0e5e3e0495561f5b27746d4d3b9d45e27c5",
+      "width": 400,
+      "height": 400,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_44.png",
+      "bytes": 4338,
+      "sha256": "52bb49c27ac522be4a8036d15689fddd13f41f1ce573a69d5202e12f95225b07",
+      "width": 44,
+      "height": 44,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_48.png",
+      "bytes": 4955,
+      "sha256": "09c742c5b3fc91207bbbad22cefc4d4803d371e70ce91314edb5868b1c50b90e",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_50.png",
+      "bytes": 5393,
+      "sha256": "4fc8ae39ead3ce974bcc2936d5b14df97b8bd7ec4d8264987e863e208df586a1",
+      "width": 50,
+      "height": 50,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_512.png",
+      "bytes": 231936,
+      "sha256": "ca3007a68eb86d12e3aaec8f13748cdcddb5b15964c820c5e3ea18960ae7a220",
+      "width": 512,
+      "height": 512,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_55.png",
+      "bytes": 6176,
+      "sha256": "e7ce5c488a773bdba1bded433020614c5d525f7030198e271ad0edacec58bab3",
+      "width": 55,
+      "height": 55,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_60.png",
+      "bytes": 7012,
+      "sha256": "db6b3f4796cba98bf39b74d5002019794864b7019da0d22b264219a845626b31",
+      "width": 60,
+      "height": 60,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_600.png",
+      "bytes": 305706,
+      "sha256": "5c573612284e52d390810479eeb69629c98fd6b9480e5a6b107d40b3d5cd50f4",
+      "width": 600,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_620.png",
+      "bytes": 323931,
+      "sha256": "1d62ca9c0d08f247cfa713be18b26b58d6455fe9acfc86de08c8f7d2669114b4",
+      "width": 620,
+      "height": 620,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_63.png",
+      "bytes": 7557,
+      "sha256": "d220c55ba9102d5acbdd393680c7d15b86078ad551e698f0927763070b9c9dc0",
+      "width": 63,
+      "height": 63,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_64.png",
+      "bytes": 7706,
+      "sha256": "ef125fc163ee1950c699949629400fa295b10a62441c2a33a235d195478f2d57",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_66.png",
+      "bytes": 8144,
+      "sha256": "4c0198a45e5f5bdd71ef864719bf75736de72257305e60264bb6fa701796628f",
+      "width": 66,
+      "height": 66,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_72.png",
+      "bytes": 9397,
+      "sha256": "e83a59c4bd1864b20020f15ea29f20066ca0a99a5cbc7767b5cedfb9dc12ab96",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_75.png",
+      "bytes": 9956,
+      "sha256": "dcf8c2b6fbdc8c08a5064dc82d8e2bbe3f936e6d69486a20281fc649d4733cac",
+      "width": 75,
+      "height": 75,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_768.png",
+      "bytes": 481033,
+      "sha256": "229c3f471e9ca65dd989f13cea5d70bc51cc3fff4a4c9d25c7702776e974a79c",
+      "width": 768,
+      "height": 768,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_80.png",
+      "bytes": 11043,
+      "sha256": "66c075b7a2081c7f9d0ff2dd171213cdf702c7c7c73e65a1996a6824e1b833f5",
+      "width": 80,
+      "height": 80,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_88.png",
+      "bytes": 12904,
+      "sha256": "78e4b3f6f63ce4288ab332eca1e9d4c2d31bc8c2813b8f3d01ff1761afc88a45",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG/hal_ecg_96.png",
+      "bytes": 14766,
+      "sha256": "f06518fd716a2305feb48a9f90398ae0d042b6a991de14d08bbe52f22105b2ad",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG_da_SVG/hal_ecg_vettoriale_2048.png",
+      "bytes": 1272557,
+      "sha256": "d0d42831dfc40529b7d2a113f331d570701e6b10b5d5d2b37fbab88c4bbf210a",
+      "width": 2048,
+      "height": 2048,
+      "mode": "RGBA"
+    },
+    {
+      "path": "PNG_da_SVG/hal_ecg_vettoriale_4096.png",
+      "bytes": 3532575,
+      "sha256": "0e58363944b0a497c6935a10b20171d06c7aae33a67408db77c24aa5b9827ae5",
+      "width": 4096,
+      "height": 4096,
+      "mode": "RGBA"
+    },
+    {
+      "path": "SVG/hal_ecg_fedele_PNG_incorporato.svg",
+      "bytes": 979685,
+      "sha256": "b4695aeeb502ba543b4679be33df97785028348bd1aa07377e2ae2ec6c7577ab"
+    },
+    {
+      "path": "SVG/hal_ecg_vettoriale.svg",
+      "bytes": 1552418,
+      "sha256": "ee9ce76b45feea22d5671db5c09669cd20c50c181dd2ac51ab2b672415408d62"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.png",
+      "bytes": 29541,
+      "sha256": "6be39ee50c9e05f451419c599712d0ae0ecab4755cb604739c7b98bd5aab25de",
+      "width": 150,
+      "height": 150,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.scale-100.png",
+      "bytes": 29541,
+      "sha256": "6be39ee50c9e05f451419c599712d0ae0ecab4755cb604739c7b98bd5aab25de",
+      "width": 150,
+      "height": 150,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.scale-125.png",
+      "bytes": 42292,
+      "sha256": "60d5a1be2ac1bb2ac81452c4dac5034ac1f22eb6fdaca24a86673ff4b238a826",
+      "width": 188,
+      "height": 188,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.scale-150.png",
+      "bytes": 56878,
+      "sha256": "77ccc5f58c1b2c059e75cfe7704095a66e7dec12477aafd80204fdc590432332",
+      "width": 225,
+      "height": 225,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.scale-200.png",
+      "bytes": 92580,
+      "sha256": "85b85843bd18f591ae831dd8afc3f8cd18b5adb8bbea584aeeaba10d4d5c251d",
+      "width": 300,
+      "height": 300,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square150x150Logo.scale-400.png",
+      "bytes": 305706,
+      "sha256": "5c573612284e52d390810479eeb69629c98fd6b9480e5a6b107d40b3d5cd50f4",
+      "width": 600,
+      "height": 600,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.png",
+      "bytes": 4338,
+      "sha256": "52bb49c27ac522be4a8036d15689fddd13f41f1ce573a69d5202e12f95225b07",
+      "width": 44,
+      "height": 44,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.scale-100.png",
+      "bytes": 4338,
+      "sha256": "52bb49c27ac522be4a8036d15689fddd13f41f1ce573a69d5202e12f95225b07",
+      "width": 44,
+      "height": 44,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.scale-125.png",
+      "bytes": 6176,
+      "sha256": "e7ce5c488a773bdba1bded433020614c5d525f7030198e271ad0edacec58bab3",
+      "width": 55,
+      "height": 55,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.scale-150.png",
+      "bytes": 8144,
+      "sha256": "4c0198a45e5f5bdd71ef864719bf75736de72257305e60264bb6fa701796628f",
+      "width": 66,
+      "height": 66,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.scale-200.png",
+      "bytes": 12904,
+      "sha256": "78e4b3f6f63ce4288ab332eca1e9d4c2d31bc8c2813b8f3d01ff1761afc88a45",
+      "width": 88,
+      "height": 88,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.scale-400.png",
+      "bytes": 38019,
+      "sha256": "1be4c054aaf439c9b04bbd6abdab04cc3f6818bf42b727111fa6025a5fc31e98",
+      "width": 176,
+      "height": 176,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-16.png",
+      "bytes": 849,
+      "sha256": "d5910539d42ee54d81fc23efddab21005a0c672d7fc44088d240727907e07506",
+      "width": 16,
+      "height": 16,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-16_altform-lightunplated.png",
+      "bytes": 849,
+      "sha256": "d5910539d42ee54d81fc23efddab21005a0c672d7fc44088d240727907e07506",
+      "width": 16,
+      "height": 16,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-16_altform-unplated.png",
+      "bytes": 849,
+      "sha256": "d5910539d42ee54d81fc23efddab21005a0c672d7fc44088d240727907e07506",
+      "width": 16,
+      "height": 16,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-20.png",
+      "bytes": 1216,
+      "sha256": "d2ff7389d867190c5257059a72ea87d01c726150a1b1c12ad5e60b259ae77fa0",
+      "width": 20,
+      "height": 20,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-20_altform-lightunplated.png",
+      "bytes": 1216,
+      "sha256": "d2ff7389d867190c5257059a72ea87d01c726150a1b1c12ad5e60b259ae77fa0",
+      "width": 20,
+      "height": 20,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-20_altform-unplated.png",
+      "bytes": 1216,
+      "sha256": "d2ff7389d867190c5257059a72ea87d01c726150a1b1c12ad5e60b259ae77fa0",
+      "width": 20,
+      "height": 20,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-24.png",
+      "bytes": 1576,
+      "sha256": "bf1f94d176f71f56456614f11a1e4ee1c693093b9afdee103824a33a7e35a97e",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-24_altform-lightunplated.png",
+      "bytes": 1576,
+      "sha256": "bf1f94d176f71f56456614f11a1e4ee1c693093b9afdee103824a33a7e35a97e",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-24_altform-unplated.png",
+      "bytes": 1576,
+      "sha256": "bf1f94d176f71f56456614f11a1e4ee1c693093b9afdee103824a33a7e35a97e",
+      "width": 24,
+      "height": 24,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-256.png",
+      "bytes": 70851,
+      "sha256": "cf5e8d07a8e49aed13e36cc3e818e1d798eb5e60ec51d6babb6f3128c881d2c8",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-256_altform-lightunplated.png",
+      "bytes": 70851,
+      "sha256": "cf5e8d07a8e49aed13e36cc3e818e1d798eb5e60ec51d6babb6f3128c881d2c8",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-256_altform-unplated.png",
+      "bytes": 70851,
+      "sha256": "cf5e8d07a8e49aed13e36cc3e818e1d798eb5e60ec51d6babb6f3128c881d2c8",
+      "width": 256,
+      "height": 256,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-30.png",
+      "bytes": 2320,
+      "sha256": "59788b46d5669968c43e7a8b25e61d26905202d790c1bcbb55358cf9ed203ad7",
+      "width": 30,
+      "height": 30,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-30_altform-lightunplated.png",
+      "bytes": 2320,
+      "sha256": "59788b46d5669968c43e7a8b25e61d26905202d790c1bcbb55358cf9ed203ad7",
+      "width": 30,
+      "height": 30,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-30_altform-unplated.png",
+      "bytes": 2320,
+      "sha256": "59788b46d5669968c43e7a8b25e61d26905202d790c1bcbb55358cf9ed203ad7",
+      "width": 30,
+      "height": 30,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-32.png",
+      "bytes": 2590,
+      "sha256": "d61cb55cea90901e1f3f07b933c85929acd363e0ca47b5e0dc9eeb352d406c72",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-32_altform-lightunplated.png",
+      "bytes": 2590,
+      "sha256": "d61cb55cea90901e1f3f07b933c85929acd363e0ca47b5e0dc9eeb352d406c72",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-32_altform-unplated.png",
+      "bytes": 2590,
+      "sha256": "d61cb55cea90901e1f3f07b933c85929acd363e0ca47b5e0dc9eeb352d406c72",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-36.png",
+      "bytes": 3126,
+      "sha256": "ca019a329932a82ecb8fca48801d53e894ff1c39e781e8bb4b381f8df761eb6e",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-36_altform-lightunplated.png",
+      "bytes": 3126,
+      "sha256": "ca019a329932a82ecb8fca48801d53e894ff1c39e781e8bb4b381f8df761eb6e",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-36_altform-unplated.png",
+      "bytes": 3126,
+      "sha256": "ca019a329932a82ecb8fca48801d53e894ff1c39e781e8bb4b381f8df761eb6e",
+      "width": 36,
+      "height": 36,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-40.png",
+      "bytes": 3634,
+      "sha256": "0dbfb7043d1cc8596e10464523691387c0ea1151ad47b1a8e1045b08add0e888",
+      "width": 40,
+      "height": 40,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-40_altform-lightunplated.png",
+      "bytes": 3634,
+      "sha256": "0dbfb7043d1cc8596e10464523691387c0ea1151ad47b1a8e1045b08add0e888",
+      "width": 40,
+      "height": 40,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-40_altform-unplated.png",
+      "bytes": 3634,
+      "sha256": "0dbfb7043d1cc8596e10464523691387c0ea1151ad47b1a8e1045b08add0e888",
+      "width": 40,
+      "height": 40,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-48.png",
+      "bytes": 4955,
+      "sha256": "09c742c5b3fc91207bbbad22cefc4d4803d371e70ce91314edb5868b1c50b90e",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png",
+      "bytes": 4955,
+      "sha256": "09c742c5b3fc91207bbbad22cefc4d4803d371e70ce91314edb5868b1c50b90e",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-48_altform-unplated.png",
+      "bytes": 4955,
+      "sha256": "09c742c5b3fc91207bbbad22cefc4d4803d371e70ce91314edb5868b1c50b90e",
+      "width": 48,
+      "height": 48,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-60.png",
+      "bytes": 7012,
+      "sha256": "db6b3f4796cba98bf39b74d5002019794864b7019da0d22b264219a845626b31",
+      "width": 60,
+      "height": 60,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-60_altform-lightunplated.png",
+      "bytes": 7012,
+      "sha256": "db6b3f4796cba98bf39b74d5002019794864b7019da0d22b264219a845626b31",
+      "width": 60,
+      "height": 60,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-60_altform-unplated.png",
+      "bytes": 7012,
+      "sha256": "db6b3f4796cba98bf39b74d5002019794864b7019da0d22b264219a845626b31",
+      "width": 60,
+      "height": 60,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-64.png",
+      "bytes": 7706,
+      "sha256": "ef125fc163ee1950c699949629400fa295b10a62441c2a33a235d195478f2d57",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-64_altform-lightunplated.png",
+      "bytes": 7706,
+      "sha256": "ef125fc163ee1950c699949629400fa295b10a62441c2a33a235d195478f2d57",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-64_altform-unplated.png",
+      "bytes": 7706,
+      "sha256": "ef125fc163ee1950c699949629400fa295b10a62441c2a33a235d195478f2d57",
+      "width": 64,
+      "height": 64,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-72.png",
+      "bytes": 9397,
+      "sha256": "e83a59c4bd1864b20020f15ea29f20066ca0a99a5cbc7767b5cedfb9dc12ab96",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-72_altform-lightunplated.png",
+      "bytes": 9397,
+      "sha256": "e83a59c4bd1864b20020f15ea29f20066ca0a99a5cbc7767b5cedfb9dc12ab96",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-72_altform-unplated.png",
+      "bytes": 9397,
+      "sha256": "e83a59c4bd1864b20020f15ea29f20066ca0a99a5cbc7767b5cedfb9dc12ab96",
+      "width": 72,
+      "height": 72,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-80.png",
+      "bytes": 11043,
+      "sha256": "66c075b7a2081c7f9d0ff2dd171213cdf702c7c7c73e65a1996a6824e1b833f5",
+      "width": 80,
+      "height": 80,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-80_altform-lightunplated.png",
+      "bytes": 11043,
+      "sha256": "66c075b7a2081c7f9d0ff2dd171213cdf702c7c7c73e65a1996a6824e1b833f5",
+      "width": 80,
+      "height": 80,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-80_altform-unplated.png",
+      "bytes": 11043,
+      "sha256": "66c075b7a2081c7f9d0ff2dd171213cdf702c7c7c73e65a1996a6824e1b833f5",
+      "width": 80,
+      "height": 80,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-96.png",
+      "bytes": 14766,
+      "sha256": "f06518fd716a2305feb48a9f90398ae0d042b6a991de14d08bbe52f22105b2ad",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-96_altform-lightunplated.png",
+      "bytes": 14766,
+      "sha256": "f06518fd716a2305feb48a9f90398ae0d042b6a991de14d08bbe52f22105b2ad",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/Square44x44Logo.targetsize-96_altform-unplated.png",
+      "bytes": 14766,
+      "sha256": "f06518fd716a2305feb48a9f90398ae0d042b6a991de14d08bbe52f22105b2ad",
+      "width": 96,
+      "height": 96,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.png",
+      "bytes": 5393,
+      "sha256": "4fc8ae39ead3ce974bcc2936d5b14df97b8bd7ec4d8264987e863e208df586a1",
+      "width": 50,
+      "height": 50,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.scale-100.png",
+      "bytes": 5393,
+      "sha256": "4fc8ae39ead3ce974bcc2936d5b14df97b8bd7ec4d8264987e863e208df586a1",
+      "width": 50,
+      "height": 50,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.scale-125.png",
+      "bytes": 7557,
+      "sha256": "d220c55ba9102d5acbdd393680c7d15b86078ad551e698f0927763070b9c9dc0",
+      "width": 63,
+      "height": 63,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.scale-150.png",
+      "bytes": 9956,
+      "sha256": "dcf8c2b6fbdc8c08a5064dc82d8e2bbe3f936e6d69486a20281fc649d4733cac",
+      "width": 75,
+      "height": 75,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.scale-200.png",
+      "bytes": 15691,
+      "sha256": "29ed8ba87f0ac77838dc87f5b86db787b49fb42bb24f34d3ff185a99751868c5",
+      "width": 100,
+      "height": 100,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/Assets/StoreLogo.scale-400.png",
+      "bytes": 46924,
+      "sha256": "817cb2f2b66de93a2a3039e522f4c7efb865103578ffe81e6fb98b0de2f45fdd",
+      "width": 200,
+      "height": 200,
+      "mode": "RGBA"
+    },
+    {
+      "path": "Windows_MSIX/LEGGIMI.txt",
+      "bytes": 1307,
+      "sha256": "8ce93928ad71e83e4926032aa860375294275320b4c6dc07aee25260300e1f44"
+    }
+  ]
+}

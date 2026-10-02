@@ -1,0 +1,11 @@
+[package]
+name = "nextm-render"
+description = "Disegno delle icone di nextm su buffer in memoria (nessuna chiamata di sistema)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true

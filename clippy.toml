@@ -1,0 +1,4 @@
+# Nei test unwrap/expect/panic sono ammessi: servono a far fallire il test in modo leggibile.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

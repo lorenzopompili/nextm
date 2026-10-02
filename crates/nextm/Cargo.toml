@@ -1,0 +1,42 @@
+[package]
+name = "nextm"
+description = "nextm: indicatore di sistema leggerissimo per Windows 11"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+nextm-metrics = { workspace = true }
+nextm-render = { workspace = true }
+windows-link = { workspace = true }
+# ATTENZIONE: non aggiungere la feature "Win32_System_Registry". Dichiarerebbe le funzioni
+# del registro su advapi32.dll e il linker userebbe quelle al posto delle nostre (API set):
+# advapi32 verrebbe caricata a ogni avvio. Tipi e costanti del registro sono in sys/registry.rs.
+windows-sys = { workspace = true, features = [
+    "Wdk_System_SystemServices",
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Power",
+    "Win32_System_StationsAndDesktops",
+    "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_UI_Accessibility",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_Ime",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+winresource = { version = "0.1", default-features = false }

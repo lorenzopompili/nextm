@@ -1,0 +1,12 @@
+nextm
+Copyright (c) 2026 Lorenzo Pompili and the nextm contributors
+
+Licensed under either of the MIT License (LICENSE-MIT) or the Apache License,
+Version 2.0 (LICENSE-APACHE), at your option.
+
+Third-party components included in the nextm executable:
+- Rust standard library and windows-sys / windows-link crates, used under the
+  MIT OR Apache-2.0 license.
+
+Font Awesome Free icons will be added in milestone M4; their attribution
+(CC BY 4.0) will be listed here and in the "About" window.

@@ -1,0 +1,35 @@
+ASSET OPZIONALI PER WINDOWS MSIX / WINUI
+
+Copiare la cartella Assets nel progetto e collegare i nomi base nel manifest
+esistente, conservando identità, nomi, eseguibile e impostazioni dell'app.
+
+Nomi base:
+  Assets\Square44x44Logo.png
+  Assets\Square150x150Logo.png
+  Assets\StoreLogo.png
+
+Per esempio, gli attributi Square44x44Logo e Square150x150Logo dell'elemento
+VisualElements possono riferirsi ai primi due file. L'elemento Logo di
+Properties può riferirsi a StoreLogo.png. Queste sono indicazioni sui nomi
+delle risorse, non un manifest completo né una configurazione già testata.
+
+Scale incluse:
+  100%:   44, 150,  50 px
+  125%:   55, 188,  63 px
+  150%:   66, 225,  75 px
+  200%:   88, 300, 100 px
+  400%:  176, 600, 200 px
+
+La prima colonna corrisponde a Square44x44Logo, la seconda a
+Square150x150Logo, la terza a StoreLogo.
+
+Sono inoltre inclusi i targetsize di Square44x44Logo:
+16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96 e 256 px,
+ognuno con varianti predefinita, _altform-unplated e
+_altform-lightunplated. La grafica è identica nelle tre varianti.
+
+Per un'app desktop non impacchettata, iniziare da ICO/hal_ecg_app.ico;
+non è necessario usare questi asset MSIX.
+
+Documentazione Microsoft:
+https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction

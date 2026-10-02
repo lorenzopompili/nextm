@@ -1,0 +1,11 @@
+# CRT "ibrida": vcruntime collegato staticamente, UCRT di sistema (api-ms-win-crt-*).
+# Risultato: nessun VCRUNTIME140.dll da installare e un eseguibile piccolo.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=/NODEFAULTLIB:libucrt.lib", "-C", "link-arg=ucrt.lib"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static", "-C", "link-arg=/NODEFAULTLIB:libucrt.lib", "-C", "link-arg=ucrt.lib"]
+
+# `cargo xtask check-imports ...`, `cargo xtask bench ...`
+[alias]
+xtask = "run -p xtask --"

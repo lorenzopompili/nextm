@@ -1,0 +1,26 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Strumenti di sviluppo di nextm: controllo degli import, cricchetto sulla dimensione, bench"
+
+[dependencies]
+# Solo le feature usate dall'eseguibile. Le funzioni si risolvono con raw-dylib
+# (tramite windows-link): niente librerie di import da installare.
+windows-sys = { version = "0.61", features = [
+    "Wdk_System_SystemInformation",    # NtQuerySystemInformation
+    "Win32_Foundation",                # HANDLE, HWND, FILETIME, NTSTATUS
+    "Win32_System_ProcessStatus",      # memoria e moduli del processo misurato
+    "Win32_System_Threading",          # tempi CPU, handle, oggetti GDI/USER, attesa
+    "Win32_System_WindowsProgramming", # SYSTEM_PROCESS_INFORMATION e SYSTEM_THREAD_INFORMATION
+    "Win32_UI_WindowsAndMessaging",    # ricerca della finestra e WM_CLOSE
+] }
+
+[dev-dependencies]
+# Servono solo all'esempio `fake_tray`: WNDCLASSW richiede Gdi (HBRUSH) e
+# GetModuleHandleW sta in LibraryLoader.
+windows-sys = { version = "0.61", features = [
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+] }

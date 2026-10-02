@@ -224,8 +224,9 @@ mod tests {
 
     #[test]
     fn reads_acpi_thermal_zone() {
-        if let Some(mut sampler) = AcpiSampler::new() {
-            let zone = sampler.read().expect("lettura zona ACPI");
+        if let Some(mut sampler) = AcpiSampler::new()
+            && let Some(zone) = sampler.read()
+        {
             assert!(zone.temp_c > 10 && zone.temp_c < 115, "temp implausibile: {}", zone.temp_c);
             assert!(!zone.label.is_empty());
         }

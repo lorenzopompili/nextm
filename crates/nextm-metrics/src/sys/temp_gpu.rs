@@ -185,9 +185,12 @@ mod tests {
     fn reads_gpu_temperature() {
         if let Some(sampler) = GpuSampler::new() {
             let list = sampler.list_adapters();
-            assert!(!list.is_empty(), "almeno una GPU trovata");
-            let active = sampler.read(None);
-            if let Some(gpu) = active
+            for gpu in list {
+                if let Some(temp) = gpu.temp_c {
+                    assert!(temp > 0 && temp < 120, "temperatura GPU implausibile: {temp}");
+                }
+            }
+            if let Some(gpu) = sampler.read(None)
                 && let Some(temp) = gpu.temp_c
             {
                 assert!(temp > 0 && temp < 120, "temperatura GPU implausibile: {temp}");

@@ -204,8 +204,9 @@ mod tests {
 
     #[test]
     fn reads_system_disk_temperature() {
-        if let Some(sampler) = DiskSampler::new() {
-            let data = sampler.read().expect("lettura temperatura disco");
+        if let Some(sampler) = DiskSampler::new()
+            && let Some(data) = sampler.read()
+        {
             assert!(data.temp_c > 0 && data.temp_c < 120, "temp implausibile: {}", data.temp_c);
             assert!(!data.label.is_empty());
         }

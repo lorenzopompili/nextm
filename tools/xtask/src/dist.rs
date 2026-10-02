@@ -33,10 +33,7 @@ fn find_iscc() -> Option<PathBuf> {
 }
 
 fn compute_sha256(path: &Path) -> Option<String> {
-    let output = Command::new("certutil")
-        .args(["-hashfile", &path.to_string_lossy(), "SHA256"])
-        .output()
-        .ok()?;
+    let output = Command::new("certutil").args(["-hashfile", &path.to_string_lossy(), "SHA256"]).output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -147,11 +144,8 @@ pub fn run(args: Args) -> Result<Verdict, CliError> {
 
     // 4. Calcolo Checksums SHA-256
     let mut checksum_lines = Vec::new();
-    let release_files = [
-        "nextm-setup-v0.1.0.exe",
-        "nextm-v0.1.0-windows-x64.exe",
-        "nextm-v0.1.0-windows-x64-portable.zip",
-    ];
+    let release_files =
+        ["nextm-setup-v0.1.0.exe", "nextm-v0.1.0-windows-x64.exe", "nextm-v0.1.0-windows-x64-portable.zip"];
 
     println!("\nChecksums SHA-256 dei file di rilascio:");
     for name in release_files {

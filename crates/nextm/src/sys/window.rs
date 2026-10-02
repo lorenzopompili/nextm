@@ -6,7 +6,7 @@ use core::ptr::null_mut;
 use windows_sys::Win32::Foundation::{ERROR_CLASS_ALREADY_EXISTS, GetLastError, HWND};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DispatchMessageW, GetMessageW, LoadImageW, IMAGE_ICON, LR_DEFAULTCOLOR, MSG, RegisterClassExW,
+    CreateWindowExW, DispatchMessageW, GetMessageW, IMAGE_ICON, LR_DEFAULTCOLOR, LoadImageW, MSG, RegisterClassExW,
     RegisterWindowMessageW, TranslateMessage, WM_APP, WNDCLASSEXW, WNDPROC, WS_EX_TOOLWINDOW, WS_POPUP,
 };
 

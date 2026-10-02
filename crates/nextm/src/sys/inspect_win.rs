@@ -28,14 +28,14 @@ use windows_sys::Win32::System::LibraryLoader::{
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, CreateWindowExW, DefWindowProcW, DestroyIcon, DestroyWindow, DrawIconEx, DI_NORMAL, ES_AUTOHSCROLL,
-    GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowTextLengthW, GetWindowTextW, HICON, HTCLIENT, HWND_TOP,
-    IDC_ARROW, IDC_SIZEWE, IMAGE_ICON, KillTimer, LR_DEFAULTCOLOR, LoadCursorW, LoadImageW, RegisterClassExW,
-    SM_CXSCREEN, SM_CYSCREEN, SW_HIDE, SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetCursor,
-    SetForegroundWindow, SetTimer, SetWindowPos, SetWindowTextW, ShowWindow, WM_CLOSE, WM_COMMAND, WM_CTLCOLOREDIT,
-    WM_CTLCOLORSTATIC, WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
-    WM_MOUSEWHEEL, WM_PAINT, WM_SETCURSOR, WM_SETFONT, WM_SETICON, WM_SIZE, WM_TIMER, WNDCLASSEXW, WS_BORDER, WS_CHILD,
-    WS_CLIPCHILDREN, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+    BringWindowToTop, CreateWindowExW, DI_NORMAL, DefWindowProcW, DestroyIcon, DestroyWindow, DrawIconEx,
+    ES_AUTOHSCROLL, GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowTextLengthW, GetWindowTextW, HICON,
+    HTCLIENT, HWND_TOP, IDC_ARROW, IDC_SIZEWE, IMAGE_ICON, KillTimer, LR_DEFAULTCOLOR, LoadCursorW, LoadImageW,
+    RegisterClassExW, SM_CXSCREEN, SM_CYSCREEN, SW_HIDE, SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER,
+    SendMessageW, SetCursor, SetForegroundWindow, SetTimer, SetWindowPos, SetWindowTextW, ShowWindow, WM_CLOSE,
+    WM_COMMAND, WM_CTLCOLOREDIT, WM_CTLCOLORSTATIC, WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_SETCURSOR, WM_SETFONT, WM_SETICON, WM_SIZE, WM_TIMER,
+    WNDCLASSEXW, WS_BORDER, WS_CHILD, WS_CLIPCHILDREN, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
 };
 
 use crate::strings::Strings;
@@ -57,9 +57,9 @@ fn contains_ignore_ascii_case(haystack: &str, needle_ascii_lower: &str) -> bool 
     }
     let n_bytes = needle_ascii_lower.as_bytes();
     let h_bytes = haystack.as_bytes();
-    h_bytes.windows(n_bytes.len()).any(|window| {
-        window.iter().zip(n_bytes.iter()).all(|(h, n)| h.to_ascii_lowercase() == *n)
-    })
+    h_bytes
+        .windows(n_bytes.len())
+        .any(|window| window.iter().zip(n_bytes.iter()).all(|(h, n)| h.to_ascii_lowercase() == *n))
 }
 
 #[inline]
@@ -82,11 +82,7 @@ fn pid_contains(pid: u32, query: &str) -> bool {
     for i in 0..len {
         buf[i] = rev[len - 1 - i];
     }
-    if let Ok(s) = core::str::from_utf8(&buf[..len]) {
-        s.contains(query)
-    } else {
-        false
-    }
+    if let Ok(s) = core::str::from_utf8(&buf[..len]) { s.contains(query) } else { false }
 }
 
 pub const INSPECT_CLASS: &[u16] = wide!("nextm-inspect");
@@ -453,7 +449,13 @@ impl InspectState {
         match self.active_tab {
             InspectTab::Processes => {
                 match self.sort_col {
-                    0 => self.procs.sort_by(|a, b| if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }),
+                    0 => self.procs.sort_by(|a, b| {
+                        if asc {
+                            cmp_ignore_ascii_case(&a.name, &b.name)
+                        } else {
+                            cmp_ignore_ascii_case(&b.name, &a.name)
+                        }
+                    }),
                     1 => self.procs.sort_by(|a, b| if asc { a.pid.cmp(&b.pid) } else { b.pid.cmp(&a.pid) }),
                     2 => self.procs.sort_by(|a, b| {
                         if asc {
@@ -468,27 +470,45 @@ impl InspectState {
                     4 => self.procs.sort_by(|a, b| {
                         if asc { a.priv_bytes.cmp(&b.priv_bytes) } else { b.priv_bytes.cmp(&a.priv_bytes) }
                     }),
-                    5 => self.procs.sort_by(|a, b| if asc { a.threads.cmp(&b.threads) } else { b.threads.cmp(&a.threads) }),
+                    5 => self
+                        .procs
+                        .sort_by(|a, b| if asc { a.threads.cmp(&b.threads) } else { b.threads.cmp(&a.threads) }),
                     _ => {}
                 }
                 self.update_proc_items();
             }
             InspectTab::Sockets => {
                 match self.sort_col {
-                    0 => self.sockets.sort_by(|a, b| if asc { cmp_ignore_ascii_case(&a.proc_name, &b.proc_name) } else { cmp_ignore_ascii_case(&b.proc_name, &a.proc_name) }),
+                    0 => self.sockets.sort_by(|a, b| {
+                        if asc {
+                            cmp_ignore_ascii_case(&a.proc_name, &b.proc_name)
+                        } else {
+                            cmp_ignore_ascii_case(&b.proc_name, &a.proc_name)
+                        }
+                    }),
                     1 => self.sockets.sort_by(|a, b| if asc { a.pid.cmp(&b.pid) } else { b.pid.cmp(&a.pid) }),
                     2 => self.sockets.sort_by(|a, b| if asc { a.proto.cmp(b.proto) } else { b.proto.cmp(a.proto) }),
-                    3 => self.sockets.sort_by(|a, b| if asc { a.local_addr.cmp(&b.local_addr) } else { b.local_addr.cmp(&a.local_addr) }),
-                    4 => self.sockets.sort_by(|a, b| if asc { a.remote_addr.cmp(&b.remote_addr) } else { b.remote_addr.cmp(&a.remote_addr) }),
+                    3 => self.sockets.sort_by(|a, b| {
+                        if asc { a.local_addr.cmp(&b.local_addr) } else { b.local_addr.cmp(&a.local_addr) }
+                    }),
+                    4 => self.sockets.sort_by(|a, b| {
+                        if asc { a.remote_addr.cmp(&b.remote_addr) } else { b.remote_addr.cmp(&a.remote_addr) }
+                    }),
                     5 => self.sockets.sort_by(|a, b| if asc { a.state.cmp(b.state) } else { b.state.cmp(a.state) }),
                     _ => {}
                 }
                 self.update_socket_items();
             }
             InspectTab::Services => match self.sort_col {
-                0 => self.services.sort_by(|a, b| if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }),
+                0 => self.services.sort_by(|a, b| {
+                    if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }
+                }),
                 1 => self.services.sort_by(|a, b| {
-                    if asc { cmp_ignore_ascii_case(&a.display_name, &b.display_name) } else { cmp_ignore_ascii_case(&b.display_name, &a.display_name) }
+                    if asc {
+                        cmp_ignore_ascii_case(&a.display_name, &b.display_name)
+                    } else {
+                        cmp_ignore_ascii_case(&b.display_name, &a.display_name)
+                    }
                 }),
                 2 => self
                     .services
@@ -576,8 +596,12 @@ impl InspectState {
 
         let asc = self.sort_asc;
         match self.sort_col {
-            0 => groups.sort_by(|a, b| if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }),
-            1 => groups.sort_by(|a, b| if asc { a.indices.len().cmp(&b.indices.len()) } else { b.indices.len().cmp(&a.indices.len()) }),
+            0 => groups.sort_by(|a, b| {
+                if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }
+            }),
+            1 => groups.sort_by(|a, b| {
+                if asc { a.indices.len().cmp(&b.indices.len()) } else { b.indices.len().cmp(&a.indices.len()) }
+            }),
             2 => groups.sort_by(|a, b| {
                 if asc {
                     a.total_cpu.partial_cmp(&b.total_cpu).unwrap_or(core::cmp::Ordering::Equal)
@@ -586,16 +610,27 @@ impl InspectState {
                 }
             }),
             3 => groups.sort_by(|a, b| if asc { a.total_ws.cmp(&b.total_ws) } else { b.total_ws.cmp(&a.total_ws) }),
-            4 => groups.sort_by(|a, b| if asc { a.total_priv.cmp(&b.total_priv) } else { b.total_priv.cmp(&a.total_priv) }),
-            5 => groups.sort_by(|a, b| if asc { a.total_threads.cmp(&b.total_threads) } else { b.total_threads.cmp(&a.total_threads) }),
+            4 => groups
+                .sort_by(|a, b| if asc { a.total_priv.cmp(&b.total_priv) } else { b.total_priv.cmp(&a.total_priv) }),
+            5 => groups.sort_by(|a, b| {
+                if asc { a.total_threads.cmp(&b.total_threads) } else { b.total_threads.cmp(&a.total_threads) }
+            }),
             _ => {}
         }
 
         for g in &mut groups {
             let procs = &self.procs;
             match self.sort_col {
-                0 => g.indices.sort_by(|&a, &b| if asc { cmp_ignore_ascii_case(&procs[a].name, &procs[b].name) } else { cmp_ignore_ascii_case(&procs[b].name, &procs[a].name) }),
-                1 => g.indices.sort_by(|&a, &b| if asc { procs[a].pid.cmp(&procs[b].pid) } else { procs[b].pid.cmp(&procs[a].pid) }),
+                0 => g.indices.sort_by(|&a, &b| {
+                    if asc {
+                        cmp_ignore_ascii_case(&procs[a].name, &procs[b].name)
+                    } else {
+                        cmp_ignore_ascii_case(&procs[b].name, &procs[a].name)
+                    }
+                }),
+                1 => g.indices.sort_by(|&a, &b| {
+                    if asc { procs[a].pid.cmp(&procs[b].pid) } else { procs[b].pid.cmp(&procs[a].pid) }
+                }),
                 2 => g.indices.sort_by(|&a, &b| {
                     if asc {
                         procs[a].cpu_percent.partial_cmp(&procs[b].cpu_percent).unwrap_or(core::cmp::Ordering::Equal)
@@ -603,9 +638,23 @@ impl InspectState {
                         procs[b].cpu_percent.partial_cmp(&procs[a].cpu_percent).unwrap_or(core::cmp::Ordering::Equal)
                     }
                 }),
-                3 => g.indices.sort_by(|&a, &b| if asc { procs[a].ws_bytes.cmp(&procs[b].ws_bytes) } else { procs[b].ws_bytes.cmp(&procs[a].ws_bytes) }),
-                4 => g.indices.sort_by(|&a, &b| if asc { procs[a].priv_bytes.cmp(&procs[b].priv_bytes) } else { procs[b].priv_bytes.cmp(&procs[a].priv_bytes) }),
-                5 => g.indices.sort_by(|&a, &b| if asc { procs[a].threads.cmp(&procs[b].threads) } else { procs[b].threads.cmp(&procs[a].threads) }),
+                3 => g.indices.sort_by(|&a, &b| {
+                    if asc {
+                        procs[a].ws_bytes.cmp(&procs[b].ws_bytes)
+                    } else {
+                        procs[b].ws_bytes.cmp(&procs[a].ws_bytes)
+                    }
+                }),
+                4 => g.indices.sort_by(|&a, &b| {
+                    if asc {
+                        procs[a].priv_bytes.cmp(&procs[b].priv_bytes)
+                    } else {
+                        procs[b].priv_bytes.cmp(&procs[a].priv_bytes)
+                    }
+                }),
+                5 => g.indices.sort_by(|&a, &b| {
+                    if asc { procs[a].threads.cmp(&procs[b].threads) } else { procs[b].threads.cmp(&procs[a].threads) }
+                }),
                 _ => {}
             }
         }
@@ -631,9 +680,7 @@ impl InspectState {
                 });
                 if is_expanded {
                     for &idx in &g.indices {
-                        self.proc_items.push(ProcItem::Child {
-                            proc_idx: idx,
-                        });
+                        self.proc_items.push(ProcItem::Child { proc_idx: idx });
                     }
                 }
             }
@@ -716,29 +763,21 @@ impl InspectState {
         let asc = self.sort_asc;
         match self.sort_col {
             0 => groups.sort_by(|a, b| {
-                if asc {
-                    cmp_ignore_ascii_case(&a.name, &b.name)
-                } else {
-                    cmp_ignore_ascii_case(&b.name, &a.name)
-                }
+                if asc { cmp_ignore_ascii_case(&a.name, &b.name) } else { cmp_ignore_ascii_case(&b.name, &a.name) }
             }),
             1 => groups.sort_by(|a, b| {
                 let a_pid = a.pids.first().copied().unwrap_or(0);
                 let b_pid = b.pids.first().copied().unwrap_or(0);
                 if asc { a_pid.cmp(&b_pid) } else { b_pid.cmp(&a_pid) }
             }),
-            2 => groups.sort_by(|a, b| {
-                if asc { a.tcp_count.cmp(&b.tcp_count) } else { b.tcp_count.cmp(&a.tcp_count) }
-            }),
+            2 => groups.sort_by(|a, b| if asc { a.tcp_count.cmp(&b.tcp_count) } else { b.tcp_count.cmp(&a.tcp_count) }),
             3 => groups.sort_by(|a, b| {
                 if asc { a.indices.len().cmp(&b.indices.len()) } else { b.indices.len().cmp(&a.indices.len()) }
             }),
             4 => groups.sort_by(|a, b| {
                 if asc { a.indices.len().cmp(&b.indices.len()) } else { b.indices.len().cmp(&a.indices.len()) }
             }),
-            5 => groups.sort_by(|a, b| {
-                if asc { a.tcp_count.cmp(&b.tcp_count) } else { b.tcp_count.cmp(&a.tcp_count) }
-            }),
+            5 => groups.sort_by(|a, b| if asc { a.tcp_count.cmp(&b.tcp_count) } else { b.tcp_count.cmp(&a.tcp_count) }),
             _ => {}
         }
 
@@ -759,10 +798,18 @@ impl InspectState {
                     if asc { sockets[a].proto.cmp(sockets[b].proto) } else { sockets[b].proto.cmp(sockets[a].proto) }
                 }),
                 3 => g.indices.sort_by(|&a, &b| {
-                    if asc { sockets[a].local_addr.cmp(&sockets[b].local_addr) } else { sockets[b].local_addr.cmp(&sockets[a].local_addr) }
+                    if asc {
+                        sockets[a].local_addr.cmp(&sockets[b].local_addr)
+                    } else {
+                        sockets[b].local_addr.cmp(&sockets[a].local_addr)
+                    }
                 }),
                 4 => g.indices.sort_by(|&a, &b| {
-                    if asc { sockets[a].remote_addr.cmp(&sockets[b].remote_addr) } else { sockets[b].remote_addr.cmp(&sockets[a].remote_addr) }
+                    if asc {
+                        sockets[a].remote_addr.cmp(&sockets[b].remote_addr)
+                    } else {
+                        sockets[b].remote_addr.cmp(&sockets[a].remote_addr)
+                    }
                 }),
                 5 => g.indices.sort_by(|&a, &b| {
                     if asc { sockets[a].state.cmp(sockets[b].state) } else { sockets[b].state.cmp(sockets[a].state) }
@@ -1379,13 +1426,16 @@ unsafe extern "system" fn inspect_wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, 
             let hit_test = (lparam & 0xFFFF) as u32;
             if hit_test == HTCLIENT {
                 let is_we = STATE.with(|cell| {
-                    cell.borrow().as_ref().map(|st| {
-                        st.resizing_col.is_some()
-                            || (st.active_tab != InspectTab::Info
-                                && st.active_tab != InspectTab::Settings
-                                && (46..74).contains(&st.last_mouse_y)
-                                && st.hover_col_sep.is_some())
-                    }).unwrap_or(false)
+                    cell.borrow()
+                        .as_ref()
+                        .map(|st| {
+                            st.resizing_col.is_some()
+                                || (st.active_tab != InspectTab::Info
+                                    && st.active_tab != InspectTab::Settings
+                                    && (46..74).contains(&st.last_mouse_y)
+                                    && st.hover_col_sep.is_some())
+                        })
+                        .unwrap_or(false)
                 });
                 if is_we {
                     unsafe { SetCursor(LoadCursorW(null_mut(), IDC_SIZEWE)) };
@@ -1521,7 +1571,11 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
         }
 
         // 4. Click sulle righe della tabella (y: 74..h - 42)
-        if st.active_tab != InspectTab::Info && st.active_tab != InspectTab::Settings && (74..(h - 42)).contains(&y) && x < (w - 20) {
+        if st.active_tab != InspectTab::Info
+            && st.active_tab != InspectTab::Settings
+            && (74..(h - 42)).contains(&y)
+            && x < (w - 20)
+        {
             let row_h = 24;
             let clicked_idx = ((y - 74 + st.scroll_y) / row_h) as usize;
             if clicked_idx < st.row_count() {
@@ -1598,15 +1652,27 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
                                 needs_repaint = true;
                             }
                             Some(SocketItem::Child { socket_idx } | SocketItem::Single { socket_idx }) => {
-                                let ips = st.sockets.get(socket_idx).and_then(|s| match (s.raw_local_ip_v4, s.raw_remote_ip_v4) {
-                                    (Some(loc_ip), Some(rem_ip)) => Some((loc_ip, s.raw_local_port, rem_ip, s.raw_remote_port)),
-                                    _ => None,
+                                let ips = st.sockets.get(socket_idx).and_then(|s| {
+                                    match (s.raw_local_ip_v4, s.raw_remote_ip_v4) {
+                                        (Some(loc_ip), Some(rem_ip)) => {
+                                            Some((loc_ip, s.raw_local_port, rem_ip, s.raw_remote_port))
+                                        }
+                                        _ => None,
+                                    }
                                 });
                                 if let Some((loc_ip, loc_port, rem_ip, rem_port)) = ips {
                                     if st.engine.close_tcp_v4(loc_ip, loc_port, rem_ip, rem_port) {
-                                        st.set_status(if is_it { "Connessione TCP chiusa".to_string() } else { "TCP connection closed".to_string() });
+                                        st.set_status(if is_it {
+                                            "Connessione TCP chiusa".to_string()
+                                        } else {
+                                            "TCP connection closed".to_string()
+                                        });
                                     } else {
-                                        st.set_status(if is_it { "Impossibile chiudere connessione".to_string() } else { "Unable to close connection".to_string() });
+                                        st.set_status(if is_it {
+                                            "Impossibile chiudere connessione".to_string()
+                                        } else {
+                                            "Unable to close connection".to_string()
+                                        });
                                     }
                                     st.reload_data();
                                     needs_repaint = true;
@@ -1621,14 +1687,30 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
                             let is_it = st.is_italian();
                             if s.is_running {
                                 if st.engine.stop_service(&name) {
-                                    st.set_status(if is_it { format!("Servizio arrestato: {name}") } else { format!("Service stopped: {name}") });
+                                    st.set_status(if is_it {
+                                        format!("Servizio arrestato: {name}")
+                                    } else {
+                                        format!("Service stopped: {name}")
+                                    });
                                 } else {
-                                    st.set_status(if is_it { format!("Impossibile arrestare: {name}") } else { format!("Unable to stop: {name}") });
+                                    st.set_status(if is_it {
+                                        format!("Impossibile arrestare: {name}")
+                                    } else {
+                                        format!("Unable to stop: {name}")
+                                    });
                                 }
                             } else if st.engine.start_service(&name) {
-                                st.set_status(if is_it { format!("Servizio avviato: {name}") } else { format!("Service started: {name}") });
+                                st.set_status(if is_it {
+                                    format!("Servizio avviato: {name}")
+                                } else {
+                                    format!("Service started: {name}")
+                                });
                             } else {
-                                st.set_status(if is_it { format!("Impossibile avviare: {name}") } else { format!("Unable to start: {name}") });
+                                st.set_status(if is_it {
+                                    format!("Impossibile avviare: {name}")
+                                } else {
+                                    format!("Unable to start: {name}")
+                                });
                             }
                             st.reload_data();
                             needs_repaint = true;
@@ -1680,7 +1762,9 @@ fn on_mouse_dblclk(hwnd: HWND, _x: i32, y: i32) {
         STATE.with(|cell| {
             let mut guard = cell.borrow_mut();
             let Some(st) = guard.as_mut() else { return };
-            if st.active_tab == InspectTab::Info || st.active_tab == InspectTab::Settings { return };
+            if st.active_tab == InspectTab::Info || st.active_tab == InspectTab::Settings {
+                return;
+            };
 
             let row_h = 24;
             let clicked_idx = ((y - 74 + st.scroll_y) / row_h) as usize;
@@ -1750,8 +1834,7 @@ fn on_mouse_dblclk(hwnd: HWND, _x: i32, y: i32) {
                             st.set_active_tab(InspectTab::Processes);
                             st.filter_text = pid.to_string();
                             unsafe {
-                                let wstr: Vec<u16> =
-                                    st.filter_text.encode_utf16().chain(core::iter::once(0)).collect();
+                                let wstr: Vec<u16> = st.filter_text.encode_utf16().chain(core::iter::once(0)).collect();
                                 SetWindowTextW(st.search_edit, wstr.as_ptr());
                             }
                             st.scroll_y = 0;
@@ -1822,7 +1905,11 @@ fn on_mouse_move(hwnd: HWND, x: i32, y: i32) {
         }
 
         // Hover su riga tabella
-        let new_hover = if st.active_tab != InspectTab::Info && st.active_tab != InspectTab::Settings && (74..(h - 42)).contains(&y) && x < (w - 20) {
+        let new_hover = if st.active_tab != InspectTab::Info
+            && st.active_tab != InspectTab::Settings
+            && (74..(h - 42)).contains(&y)
+            && x < (w - 20)
+        {
             let row_h = 24;
             let idx = ((y - 74 + st.scroll_y) / row_h) as usize;
             if idx < st.row_count() { Some(idx) } else { None }
@@ -1971,15 +2058,27 @@ fn on_key_down(hwnd: HWND, key: u32) {
                                 repaint = true;
                             }
                             SocketItem::Child { socket_idx } | SocketItem::Single { socket_idx } => {
-                                let ips = st.sockets.get(socket_idx).and_then(|s| match (s.raw_local_ip_v4, s.raw_remote_ip_v4) {
-                                    (Some(loc_ip), Some(rem_ip)) => Some((loc_ip, s.raw_local_port, rem_ip, s.raw_remote_port)),
-                                    _ => None,
+                                let ips = st.sockets.get(socket_idx).and_then(|s| {
+                                    match (s.raw_local_ip_v4, s.raw_remote_ip_v4) {
+                                        (Some(loc_ip), Some(rem_ip)) => {
+                                            Some((loc_ip, s.raw_local_port, rem_ip, s.raw_remote_port))
+                                        }
+                                        _ => None,
+                                    }
                                 });
                                 if let Some((loc_ip, loc_port, rem_ip, rem_port)) = ips {
                                     if st.engine.close_tcp_v4(loc_ip, loc_port, rem_ip, rem_port) {
-                                        st.set_status(if is_it { "Connessione TCP chiusa".to_string() } else { "TCP connection closed".to_string() });
+                                        st.set_status(if is_it {
+                                            "Connessione TCP chiusa".to_string()
+                                        } else {
+                                            "TCP connection closed".to_string()
+                                        });
                                     } else {
-                                        st.set_status(if is_it { "Impossibile chiudere connessione".to_string() } else { "Unable to close connection".to_string() });
+                                        st.set_status(if is_it {
+                                            "Impossibile chiudere connessione".to_string()
+                                        } else {
+                                            "Unable to close connection".to_string()
+                                        });
                                     }
                                     st.reload_data();
                                     repaint = true;
@@ -2004,7 +2103,8 @@ fn on_key_down(hwnd: HWND, key: u32) {
                     st.clamp_scroll();
                     repaint = true;
                 } else if st.active_tab == InspectTab::Sockets
-                    && let Some(SocketItem::Group { proc_name, .. }) = st.selected_index.and_then(|sel| st.socket_items.get(sel))
+                    && let Some(SocketItem::Group { proc_name, .. }) =
+                        st.selected_index.and_then(|sel| st.socket_items.get(sel))
                 {
                     let key = proc_name.to_lowercase();
                     if st.expanded_socket_groups.contains(&key) {
@@ -2208,7 +2308,11 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
             SelectObject(mem_dc, st.fonts.badge);
             let (status_badge, badge_color) = if is_elevated {
                 (
-                    if is_it { "● Esecuzione con privilegi di Amministratore" } else { "● Running with Administrator privileges" },
+                    if is_it {
+                        "● Esecuzione con privilegi di Amministratore"
+                    } else {
+                        "● Running with Administrator privileges"
+                    },
                     text_cyan,
                 )
             } else {
@@ -2289,7 +2393,10 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                     (if is_it { "Processi monitorati" } else { "Monitored processes" }, &procs_count_str),
                     (if is_it { "Socket di rete" } else { "Network sockets" }, &sock_count_str),
                     (if is_it { "Servizi Windows" } else { "Windows services" }, &svc_count_str),
-                    (if is_it { "Campionamento" } else { "Sampling" }, if is_it { "1.0s continuo" } else { "1.0s continuous" }),
+                    (
+                        if is_it { "Campionamento" } else { "Sampling" },
+                        if is_it { "1.0s continuo" } else { "1.0s continuous" },
+                    ),
                 ],
             );
 
@@ -2304,7 +2411,10 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                     (if is_it { "Autore & Sviluppo" } else { "Author & Development" }, "Lorenzo Pompili"),
                     (if is_it { "API Kernel" } else { "Kernel APIs" }, "NtQuerySystemInformation"),
                     (if is_it { "Protezioni PE" } else { "PE Protections" }, "DEP, CFG, ASLR 64-bit"),
-                    (if is_it { "Librerie runtime" } else { "Runtime libraries" }, if is_it { "0 DLL esterne (Win32 pura)" } else { "0 external DLLs (pure Win32)" }),
+                    (
+                        if is_it { "Librerie runtime" } else { "Runtime libraries" },
+                        if is_it { "0 DLL esterne (Win32 pura)" } else { "0 external DLLs (pure Win32)" },
+                    ),
                 ],
             );
 
@@ -2316,10 +2426,22 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                 card_h,
                 if is_it { "COMANDI RAPIDI" } else { "KEYBOARD SHORTCUTS" },
                 &[
-                    (if is_it { "Aggiorna dati" } else { "Refresh data" }, if is_it { "F5 / Bottone Aggiorna" } else { "F5 / Refresh Button" }),
-                    (if is_it { "Espandi / Comprimi" } else { "Expand / Collapse" }, if is_it { "Spazio / Doppio Clic" } else { "Space / Double Click" }),
-                    (if is_it { "Navigazione ad albero" } else { "Tree navigation" }, if is_it { "Frecce Su/Giù/Sinistra/Destra" } else { "Arrows Up/Down/Left/Right" }),
-                    (if is_it { "Chiusura immediata" } else { "Immediate termination" }, if is_it { "Canc / Del su riga selezionata" } else { "Del on selected row" }),
+                    (
+                        if is_it { "Aggiorna dati" } else { "Refresh data" },
+                        if is_it { "F5 / Bottone Aggiorna" } else { "F5 / Refresh Button" },
+                    ),
+                    (
+                        if is_it { "Espandi / Comprimi" } else { "Expand / Collapse" },
+                        if is_it { "Spazio / Doppio Clic" } else { "Space / Double Click" },
+                    ),
+                    (
+                        if is_it { "Navigazione ad albero" } else { "Tree navigation" },
+                        if is_it { "Frecce Su/Giù/Sinistra/Destra" } else { "Arrows Up/Down/Left/Right" },
+                    ),
+                    (
+                        if is_it { "Chiusura immediata" } else { "Immediate termination" },
+                        if is_it { "Canc / Del su riga selezionata" } else { "Del on selected row" },
+                    ),
                 ],
             );
         } else {
@@ -2447,32 +2569,27 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                 let txt_c = if is_sel { 0x00FFFFFF } else { text_normal };
                 SetTextColor(mem_dc, txt_c);
 
-                let draw_cell =
-                    |dc: HDC, x1: i32, x2: i32, text: &str, align_right: bool, custom_color: Option<u32>| {
-                        if x2 <= x1 {
-                            return;
-                        }
-                        if let (Some(c), false) = (custom_color, is_sel) {
-                            SetTextColor(dc, c);
-                        }
-                        let wstr: Vec<u16> = text.encode_utf16().collect();
-                        let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
-                        GetTextExtentPoint32W(dc, wstr.as_ptr(), wstr.len() as i32, &mut sz);
-                        let tx = if align_right { x2 - sz.cx - 8 } else { x1 + 8 };
-                        let ty = row_y + (row_h - sz.cy) / 2;
-                        let clip_rc = RECT { left: x1 + 2, top: row_y, right: x2 - 2, bottom: row_y + row_h };
-                        ExtTextOutW(
-                            dc,
-                            tx,
-                            ty,
-                            ETO_CLIPPED,
-                            &clip_rc,
-                            wstr.as_ptr(),
-                            wstr.len() as u32,
-                            core::ptr::null(),
-                        );
-                        SetTextColor(dc, txt_c);
-                    };
+                let draw_cell = |dc: HDC,
+                                 x1: i32,
+                                 x2: i32,
+                                 text: &str,
+                                 align_right: bool,
+                                 custom_color: Option<u32>| {
+                    if x2 <= x1 {
+                        return;
+                    }
+                    if let (Some(c), false) = (custom_color, is_sel) {
+                        SetTextColor(dc, c);
+                    }
+                    let wstr: Vec<u16> = text.encode_utf16().collect();
+                    let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
+                    GetTextExtentPoint32W(dc, wstr.as_ptr(), wstr.len() as i32, &mut sz);
+                    let tx = if align_right { x2 - sz.cx - 8 } else { x1 + 8 };
+                    let ty = row_y + (row_h - sz.cy) / 2;
+                    let clip_rc = RECT { left: x1 + 2, top: row_y, right: x2 - 2, bottom: row_y + row_h };
+                    ExtTextOutW(dc, tx, ty, ETO_CLIPPED, &clip_rc, wstr.as_ptr(), wstr.len() as u32, core::ptr::null());
+                    SetTextColor(dc, txt_c);
+                };
 
                 match st.active_tab {
                     InspectTab::Processes => {
@@ -2496,7 +2613,14 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                                 draw_cell(mem_dc, bounds[0].0, bounds[0].1, &name_display, false, None);
 
                                 SelectObject(mem_dc, font_mono);
-                                draw_cell(mem_dc, bounds[1].0, bounds[1].1, &format!("({count})"), true, Some(text_dim));
+                                draw_cell(
+                                    mem_dc,
+                                    bounds[1].0,
+                                    bounds[1].1,
+                                    &format!("({count})"),
+                                    true,
+                                    Some(text_dim),
+                                );
 
                                 let cpu_color = if *cpu_percent > 10.0 { Some(text_yellow) } else { None };
                                 draw_cell(
@@ -2516,14 +2640,7 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                                     true,
                                     Some(text_dim),
                                 );
-                                draw_cell(
-                                    mem_dc,
-                                    bounds[5].0,
-                                    bounds[5].1,
-                                    &threads.to_string(),
-                                    true,
-                                    Some(text_dim),
-                                );
+                                draw_cell(mem_dc, bounds[5].0, bounds[5].1, &threads.to_string(), true, Some(text_dim));
 
                                 SelectObject(mem_dc, font_body);
                                 let sock_word = if is_it || *sockets_count == 1 { "socket" } else { "sockets" };
@@ -2666,11 +2783,7 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                                 draw_cell(mem_dc, bounds[0].0, bounds[0].1, &name_display, false, None);
 
                                 SelectObject(mem_dc, font_mono);
-                                let pid_str = if pids.len() == 1 {
-                                    pids[0].to_string()
-                                } else {
-                                    format!("({count})")
-                                };
+                                let pid_str = if pids.len() == 1 { pids[0].to_string() } else { format!("({count})") };
                                 draw_cell(mem_dc, bounds[1].0, bounds[1].1, &pid_str, true, Some(text_dim));
 
                                 let proto_str = format!("{tcp_count} TCP / {udp_count} UDP");
@@ -2914,7 +3027,8 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
         }
 
         // Testo di stato a destra
-        let (p_lbl, so_lbl, se_lbl) = if is_it { ("Processi", "Socket", "Servizi") } else { ("Processes", "Sockets", "Services") };
+        let (p_lbl, so_lbl, se_lbl) =
+            if is_it { ("Processi", "Socket", "Servizi") } else { ("Processes", "Sockets", "Services") };
         let status_str = if let Some((msg, ts)) = &st.status_msg {
             if ts.elapsed().as_secs() < 3 {
                 msg.clone()
@@ -2927,7 +3041,12 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                 )
             }
         } else {
-            format!("{p_lbl}: {}  |  {so_lbl}: {}  |  {se_lbl}: {}", st.procs.len(), st.sockets.len(), st.services.len())
+            format!(
+                "{p_lbl}: {}  |  {so_lbl}: {}  |  {se_lbl}: {}",
+                st.procs.len(),
+                st.sockets.len(),
+                st.services.len()
+            )
         };
 
         let status_wstr: Vec<u16> = status_str.encode_utf16().collect();
@@ -2998,7 +3117,8 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
 
     let old_font = SelectObject(dc, font_title_lg);
     SetTextColor(dc, text_title);
-    let title_wstr: Vec<u16> = (if is_it { "Impostazioni di nextm" } else { "nextm Settings" }).encode_utf16().collect();
+    let title_wstr: Vec<u16> =
+        (if is_it { "Impostazioni di nextm" } else { "nextm Settings" }).encode_utf16().collect();
     TextOutW(dc, start_x, start_y, title_wstr.as_ptr(), title_wstr.len() as i32);
 
     SelectObject(dc, font_sub);
@@ -3138,11 +3258,24 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     let s2_x2 = cx1 + card_w - 14;
     let is_only_nums = settings.icon_symbols == 0;
     draw_button(s1_x1, s1_x2, card_y + 316, is_only_nums, if is_it { "Solo numeri" } else { "Numbers only" }, None);
-    draw_button(s2_x1, s2_x2, card_y + 316, !is_only_nums, if is_it { "Icona + numero" } else { "Icon + number" }, None);
+    draw_button(
+        s2_x1,
+        s2_x2,
+        card_y + 316,
+        !is_only_nums,
+        if is_it { "Icona + numero" } else { "Icon + number" },
+        None,
+    );
 
     // CARD 2: PRESTAZIONI & CALCOLO
     let cx2 = start_x + card_w + 15;
-    draw_card_frame(cx2, card_y, card_w, card_h, if is_it { "PRESTAZIONI & CALCOLO" } else { "PERFORMANCE & CALCULATION" });
+    draw_card_frame(
+        cx2,
+        card_y,
+        card_w,
+        card_h,
+        if is_it { "PRESTAZIONI & CALCOLO" } else { "PERFORMANCE & CALCULATION" },
+    );
     let b2_x1 = cx2 + card_w - 14 - btn_w;
     let b2_x2 = cx2 + card_w - 14;
 
@@ -3165,18 +3298,49 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     let m2_x1 = m1_x2 + 6;
     let m2_x2 = cx2 + card_w - 14;
     draw_button(m1_x1, m1_x2, card_y + 80, settings.cpu_mode == crate::settings::CpuMode::Standard, "Standard", None);
-    draw_button(m2_x1, m2_x2, card_y + 80, settings.cpu_mode == crate::settings::CpuMode::Utility, if is_it { "Utilità" } else { "Utility" }, None);
+    draw_button(
+        m2_x1,
+        m2_x2,
+        card_y + 80,
+        settings.cpu_mode == crate::settings::CpuMode::Utility,
+        if is_it { "Utilità" } else { "Utility" },
+        None,
+    );
 
-    draw_label(cx2 + 14, card_y + 120, if is_it { "Dettaglio core su hover" } else { "Per-core detail on hover" }, false, None);
+    draw_label(
+        cx2 + 14,
+        card_y + 120,
+        if is_it { "Dettaglio core su hover" } else { "Per-core detail on hover" },
+        false,
+        None,
+    );
     draw_toggle(b2_x1, b2_x2, card_y + 116, settings.cpu_per_core_hover, lbl_on, lbl_off);
 
-    draw_label(cx2 + 14, card_y + 156, if is_it { "Pausa a schermo off" } else { "Pause when display off" }, false, None);
+    draw_label(
+        cx2 + 14,
+        card_y + 156,
+        if is_it { "Pausa a schermo off" } else { "Pause when display off" },
+        false,
+        None,
+    );
     draw_toggle(b2_x1, b2_x2, card_y + 152, settings.pause_display, lbl_on, lbl_off);
 
-    draw_label(cx2 + 14, card_y + 192, if is_it { "Rallenta con risparmio" } else { "Slow with battery saver" }, false, None);
+    draw_label(
+        cx2 + 14,
+        card_y + 192,
+        if is_it { "Rallenta con risparmio" } else { "Slow with battery saver" },
+        false,
+        None,
+    );
     draw_toggle(b2_x1, b2_x2, card_y + 188, settings.slow_energy_saver, lbl_on, lbl_off);
 
-    draw_label(cx2 + 14, card_y + 228, if is_it { "EcoQoS (Efficient Core)" } else { "EcoQoS (Efficient Cores)" }, false, None);
+    draw_label(
+        cx2 + 14,
+        card_y + 228,
+        if is_it { "EcoQoS (Efficient Core)" } else { "EcoQoS (Efficient Cores)" },
+        false,
+        None,
+    );
     draw_toggle(b2_x1, b2_x2, card_y + 224, settings.ecoqos, lbl_on, lbl_off);
 
     // CARD 3: SISTEMA & PRIVILEGI
@@ -3201,12 +3365,32 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     draw_label(cx3 + card_w - 14 - 110, card_y + 116, badge_text, false, Some(badge_color));
 
     if !is_elevated {
-        draw_button(cx3 + 14, cx3 + card_w - 14, card_y + 146, false, if is_it { "🛡️ Riavvia come Amministratore" } else { "🛡️ Restart as Administrator" }, Some(text_yellow));
+        draw_button(
+            cx3 + 14,
+            cx3 + card_w - 14,
+            card_y + 146,
+            false,
+            if is_it { "🛡️ Riavvia come Amministratore" } else { "🛡️ Restart as Administrator" },
+            Some(text_yellow),
+        );
     } else {
-        draw_label(cx3 + 14, card_y + 150, if is_it { "Tutti i privilegi di sistema attivi" } else { "All system privileges active" }, true, Some(text_cyan));
+        draw_label(
+            cx3 + 14,
+            card_y + 150,
+            if is_it { "Tutti i privilegi di sistema attivi" } else { "All system privileges active" },
+            true,
+            Some(text_cyan),
+        );
     }
 
-    draw_button(cx3 + 14, cx3 + card_w - 14, card_y + 182, false, if is_it { "⚙️ Impostazioni Barra Windows" } else { "⚙️ Windows Taskbar Settings" }, None);
+    draw_button(
+        cx3 + 14,
+        cx3 + card_w - 14,
+        card_y + 182,
+        false,
+        if is_it { "⚙️ Impostazioni Barra Windows" } else { "⚙️ Windows Taskbar Settings" },
+        None,
+    );
 
     // Selezione Lingua (Auto / Italiano / English)
     draw_label(cx3 + 14, card_y + 218, if is_it { "Lingua interfaccia" } else { "Interface language" }, false, None);
@@ -3221,7 +3405,13 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     draw_button(l2_x1, l2_x2, card_y + 238, settings.language == crate::settings::Language::Italian, "Italiano", None);
     draw_button(l3_x1, l3_x2, card_y + 238, settings.language == crate::settings::Language::English, "English", None);
 
-    draw_label(cx3 + 14, card_y + 276, if is_it { "Archiviazione impostazioni" } else { "Settings storage" }, false, None);
+    draw_label(
+        cx3 + 14,
+        card_y + 276,
+        if is_it { "Archiviazione impostazioni" } else { "Settings storage" },
+        false,
+        None,
+    );
     let store_str = if autostart_reg || !settings.is_very_first_run() {
         if is_it { "Registro utente (HKCU\\Software\\nextm)" } else { "User Registry (HKCU\\Software\\nextm)" }
     } else {
@@ -3276,9 +3466,7 @@ fn handle_settings_click(x: i32, y: i32, w: i32, _h: i32) -> bool {
         let u1_x2 = u1_x1 + 62;
         let u2_x1 = u1_x2 + 6;
         let u2_x2 = cx1 + card_w - 14;
-        if ((u1_x1..u1_x2).contains(&x) && !settings.net_bits)
-            || ((u2_x1..u2_x2).contains(&x) && settings.net_bits)
-        {
+        if ((u1_x1..u1_x2).contains(&x) && !settings.net_bits) || ((u2_x1..u2_x2).contains(&x) && settings.net_bits) {
             crate::app::execute_command(crate::app::CMD_NET_BITS);
             return true;
         }

@@ -449,13 +449,7 @@ fn show_tray_menu(hwnd: HWND, x: i32, y: i32) {
 
 /// Ottiene uno snapshot delle impostazioni correnti, dello stato autostart utente e admin.
 pub fn get_settings_snapshot() -> Option<(Settings, bool, bool)> {
-    with_app(|a| {
-        (
-            a.settings,
-            autostart::is_enabled(&a.exe),
-            crate::sys::elevation::is_task_scheduler_enabled(),
-        )
-    })
+    with_app(|a| (a.settings, autostart::is_enabled(&a.exe), crate::sys::elevation::is_task_scheduler_enabled()))
 }
 
 /// Esegue un comando di impostazione inviato dalla pagina Impostazioni o da tastiera.
@@ -1012,10 +1006,7 @@ impl App {
         let is_it = core::ptr::eq(self.s, &strings::IT);
         let units = if self.settings.net_bits { Units::Bits } else { Units::Bytes };
         let (down_buf, up_buf) = if let Some(rates) = self.net_rates {
-            (
-                Some(format_rate(rates.down, units, is_it)),
-                Some(format_rate(rates.up, units, is_it)),
-            )
+            (Some(format_rate(rates.down, units, is_it)), Some(format_rate(rates.up, units, is_it)))
         } else {
             (None, None)
         };

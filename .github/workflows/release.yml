@@ -98,7 +98,9 @@ jobs:
       - name: Calcola SHA256 finale
         shell: pwsh
         run: |
-          Get-FileHash release-assets/* -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Out-File -FilePath release-assets/SHA256SUMS.txt -Encoding ascii
+          Remove-Item -Path release-assets/SHA256SUMS.txt -ErrorAction SilentlyContinue
+          $hashes = Get-ChildItem -Path release-assets -File | Where-Object { $_.Name -ne 'SHA256SUMS.txt' } | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" }
+          $hashes | Set-Content -Path release-assets/SHA256SUMS.txt -Encoding ascii
           Get-Content release-assets/SHA256SUMS.txt
 
       - name: Crea Release GitHub

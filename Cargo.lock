@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "nextm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nextm-metrics",
  "nextm-render",
@@ -15,7 +15,7 @@ dependencies = [
 
 [[package]]
 name = "nextm-metrics"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "windows-link",
  "windows-sys",
@@ -23,7 +23,7 @@ dependencies = [
 
 [[package]]
 name = "nextm-render"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "version_check"
@@ -57,7 +57,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "windows-sys",
 ]

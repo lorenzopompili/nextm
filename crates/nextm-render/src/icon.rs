@@ -161,20 +161,20 @@ pub enum MetricSymbol {
     TempDisk,
 }
 
-/// Disegna un'icona metrica: mini-icona (stile FontAwesome) in alto e valore compatto in basso.
+/// Disegna un'icona metrica: mini-icona in alto e valore compatto in basso.
+/// In caso di core saturo (`bar` presente per CPU), il mini-simbolo del microchip
+/// viene colorato con il colore di allarme (`bar.color`), preservando l'allineamento
+/// uniforme del numero sul fondo dell'icona identico a RAM e temperature.
 pub fn draw_metric_icon(canvas: &mut Canvas, symbol: MetricSymbol, text: &str, color: Color, bar: Option<StatusBar>) {
     canvas.clear();
     let size = canvas.width().min(canvas.height());
+    let text = text.trim_end_matches('°');
     let (font, font_scale) = font_and_scale(size, FontKind::Small);
     let text_w = font.measure(text) * font_scale;
     let text_h = u32::from(font.height) * font_scale;
 
-    let bar_h = bar_height(size);
-    let has_bar_slot = symbol == MetricSymbol::Cpu;
-    let bar_space = if has_bar_slot { bar_h + 1 } else { 0 };
-
-    // Posizione testo: allineato in basso (sopra lo spazio della barra se CPU)
-    let text_y = size.saturating_sub(text_h + bar_space);
+    // Posizione testo: allineato in basso, identico per tutte le metriche
+    let text_y = size.saturating_sub(text_h);
     let text_x = (size.saturating_sub(text_w) / 2) as i32;
     draw_text(canvas, font, text_x, text_y as i32, text, color, font_scale);
 
@@ -191,12 +191,10 @@ pub fn draw_metric_icon(canvas: &mut Canvas, symbol: MetricSymbol, text: &str, c
     let sym_h = u32::from(sym_def.height) * sym_scale;
     let sym_x = (size.saturating_sub(sym_w) / 2) as i32;
     let sym_y = (text_y.saturating_sub(sym_h) / 2).max(1) as i32;
-    draw_symbol(canvas, sym_def, sym_x, sym_y, color, sym_scale);
 
-    // Barra di stato CPU
-    if let Some(bar) = bar {
-        draw_status_bar(canvas, size, font_scale, bar);
-    }
+    // Se c'è saturazione (es. core saturo per CPU), colora il microchip col colore di allarme
+    let sym_color = if let Some(bar) = bar { bar.color } else { color };
+    draw_symbol(canvas, sym_def, sym_x, sym_y, sym_color, sym_scale);
 }
 
 /// Disegna l'icona della CPU: mini microchip in alto, percentuale al centro, barra di saturazione in basso.
@@ -530,5 +528,61 @@ mod tests {
             draw_temp_disk_icon(&mut c_disk, "44°", WHITE);
             assert!(c_disk.bgra().iter().any(|&b| b != 0), "disk temp icon empty at {size} px");
         }
+    }
+
+    #[test]
+    fn metric_temp_icons_trim_degree_and_align_uniformly() {
+        for size in [16, 20, 24, 28, 32, 40, 48] {
+            let mut c_with_deg = Canvas::new(size, size);
+            draw_temp_acpi_icon(&mut c_with_deg, "50°", WHITE);
+
+            let mut c_without_deg = Canvas::new(size, size);
+            draw_temp_acpi_icon(&mut c_without_deg, "50", WHITE);
+
+            assert_eq!(
+                c_with_deg.bgra(),
+                c_without_deg.bgra(),
+                "temperature icon at {size}px should ignore degree symbol for uniform centering"
+            );
+        }
+    }
+
+    #[test]
+    fn metric_cpu_and_ram_have_identical_text_baseline() {
+        for size in [16, 20, 24, 28, 32, 40, 48] {
+            let mut c_cpu = Canvas::new(size, size);
+            draw_cpu_icon(&mut c_cpu, "50", WHITE, None);
+
+            let mut c_ram = Canvas::new(size, size);
+            draw_ram_icon(&mut c_ram, "50", WHITE);
+
+            let (font, font_scale) = font_and_scale(size, FontKind::Small);
+            let text_h = u32::from(font.height) * font_scale;
+            let text_y = size.saturating_sub(text_h);
+
+            // Per la riga di testo, le coordinate Y e X occupate da "50" su CPU e RAM devono essere identiche
+            for y in text_y..size {
+                for x in 0..size {
+                    assert_eq!(
+                        c_cpu.pixel(x, y),
+                        c_ram.pixel(x, y),
+                        "mismatch text at ({x}, {y}) at {size}px between cpu and ram"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn metric_cpu_saturated_colors_symbol() {
+        let bar = StatusBar { color: AMBER, segments: 1 };
+        let mut c_normal = Canvas::new(16, 16);
+        draw_cpu_icon(&mut c_normal, "50", WHITE, None);
+
+        let mut c_sat = Canvas::new(16, 16);
+        draw_cpu_icon(&mut c_sat, "50", WHITE, Some(bar));
+
+        // Il microchip deve avere il colore AMBER nel caso saturo
+        assert!((0..16).any(|y| (0..16).any(|x| c_sat.pixel(x, y) == AMBER)));
     }
 }

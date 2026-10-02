@@ -67,13 +67,18 @@ pub fn run(args: Args) -> Result<Verdict, CliError> {
     fs::create_dir_all(dist_dir)
         .map_err(|e| CliError::Runtime(format!("impossibile creare la cartella target/dist: {e}")))?;
 
+    let version = env!("CARGO_PKG_VERSION");
+
     // 1. Compilazione Installer Inno Setup
+    let setup_name = format!("nextm-setup-v{version}.exe");
     if let Some(iscc) = find_iscc() {
         println!("Compilatore Inno Setup trovato: {}", iscc.display());
         let iss_path = Path::new("installer/nextm.iss");
         if iss_path.exists() {
             println!("Compilazione installer con {}...", iss_path.display());
+            let iscc_arg_ver = format!("/DMyAppVersion={version}");
             let status = Command::new(&iscc)
+                .arg(&iscc_arg_ver)
                 .arg(iss_path)
                 .status()
                 .map_err(|e| CliError::Runtime(format!("impossibile avviare ISCC: {e}")))?;
@@ -83,21 +88,22 @@ pub fn run(args: Args) -> Result<Verdict, CliError> {
                     status.code()
                 )));
             }
-            println!("✓ Installer Inno Setup generato: target/dist/nextm-setup-v0.1.0.exe");
+            println!("✓ Installer Inno Setup generato: target/dist/{setup_name}");
         }
     } else {
         println!("ATTENZIONE: ISCC.exe non trovato. Installer non generato (installa Inno Setup 6 per generarlo).");
     }
 
     // 2. Standalone Portable Executable
-    let standalone_exe = dist_dir.join("nextm-v0.1.0-windows-x64.exe");
+    let standalone_name = format!("nextm-v{version}-windows-x64.exe");
+    let standalone_exe = dist_dir.join(&standalone_name);
     fs::copy(release_exe, &standalone_exe)
         .map_err(|e| CliError::Runtime(format!("impossibile copiare standalone exe: {e}")))?;
     println!("✓ Standalone EXE generato: {}", standalone_exe.display());
 
     // 3. Pacchetto Portatile ZIP
-    let zip_name = "nextm-v0.1.0-windows-x64-portable.zip";
-    let zip_path = dist_dir.join(zip_name);
+    let zip_name = format!("nextm-v{version}-windows-x64-portable.zip");
+    let zip_path = dist_dir.join(&zip_name);
     let tmp_portable = dist_dir.join("_portable_tmp");
     let _ = fs::remove_dir_all(&tmp_portable);
     fs::create_dir_all(&tmp_portable)
@@ -144,8 +150,7 @@ pub fn run(args: Args) -> Result<Verdict, CliError> {
 
     // 4. Calcolo Checksums SHA-256
     let mut checksum_lines = Vec::new();
-    let release_files =
-        ["nextm-setup-v0.1.0.exe", "nextm-v0.1.0-windows-x64.exe", "nextm-v0.1.0-windows-x64-portable.zip"];
+    let release_files = [&setup_name, &standalone_name, &zip_name];
 
     println!("\nChecksums SHA-256 dei file di rilascio:");
     for name in release_files {

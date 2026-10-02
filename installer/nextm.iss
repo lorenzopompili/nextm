@@ -2,9 +2,11 @@
 ; Monitor di sistema leggerissimo per Windows 11 (Pure Win32 GDI, zero runtime DLL)
 
 #define MyAppName "nextm"
-#define MyAppVersion "0.1.0"
+#ifndef MyAppVersion
+#define MyAppVersion "0.1.1"
+#endif
 #define MyAppPublisher "Lorenzo Pompili"
-#define MyAppURL "https://gitlab.com/p3678/nextm"
+#define MyAppURL "https://github.com/lorenzopompili/nextm"
 #define MyAppExeName "nextm.exe"
 
 [Setup]

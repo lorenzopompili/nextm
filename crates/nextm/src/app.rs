@@ -99,6 +99,7 @@ pub const CMD_RESTART_ADMIN: u32 = 122;
 pub const CMD_AUTOSTART_ADMIN: u32 = 123;
 pub const CMD_ABOUT: u32 = 130;
 pub const CMD_EXIT: u32 = 131;
+pub const CMD_CHECK_UPDATES: u32 = 132;
 pub const CMD_LANG_AUTO: u32 = 140;
 pub const CMD_LANG_IT: u32 = 141;
 pub const CMD_LANG_EN: u32 = 142;
@@ -439,11 +440,15 @@ fn show_tray_menu(hwnd: HWND, x: i32, y: i32) {
     let Some(menu) = PopupMenu::new() else { return };
     let Some(s) = with_app(|a| a.s) else { return };
     let dark = with_app(|a| a.theme != Theme::Light).unwrap_or(true);
+    menu.item(CMD_CHECK_UPDATES, s.menu_check_updates, false);
+    menu.separator();
     menu.item(CMD_EXIT, s.menu_exit, false);
     darkmenu::set_menu_theme(dark);
     let cmd = menu.track(hwnd, x, y);
     if cmd == CMD_EXIT {
         unsafe { DestroyWindow(hwnd) };
+    } else if cmd == CMD_CHECK_UPDATES {
+        execute_command(CMD_CHECK_UPDATES);
     }
 }
 
@@ -1805,6 +1810,12 @@ impl App {
             }
             CMD_SHOW_ICON => shell::open_with_explorer(wide!("ms-settings:taskbar")),
             CMD_ABOUT => return After::About,
+            CMD_CHECK_UPDATES => {
+                self.show_inspect_tab(crate::sys::inspect_win::InspectTab::Info);
+                let hwnd = self.inspect_win.as_ref().map(|w| w.hwnd());
+                crate::sys::update::check_for_updates_async(hwnd);
+                return After::About;
+            }
             CMD_EXIT => return After::Exit,
             _ => {}
         }

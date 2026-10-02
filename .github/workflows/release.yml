@@ -66,7 +66,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path target/dist-arm64 -Force
-          Copy-Item target/release/nextm.exe target/dist-arm64/nextm-v0.1.0-windows-arm64.exe
+          $ver = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "v0.1.1" }
+          Copy-Item target/release/nextm.exe "target/dist-arm64/nextm-${ver}-windows-arm64.exe"
           
           New-Item -ItemType Directory -Path target/_tmp_arm64 -Force
           Copy-Item target/release/nextm.exe target/_tmp_arm64/nextm.exe
@@ -74,7 +75,7 @@ jobs:
           Copy-Item README.md target/_tmp_arm64/
           Copy-Item LICENSE-MIT target/_tmp_arm64/
           Copy-Item LICENSE-APACHE target/_tmp_arm64/
-          Compress-Archive -Path target/_tmp_arm64/* -DestinationPath target/dist-arm64/nextm-v0.1.0-windows-arm64-portable.zip -Force
+          Compress-Archive -Path target/_tmp_arm64/* -DestinationPath "target/dist-arm64/nextm-${ver}-windows-arm64-portable.zip" -Force
 
       - name: Carica artefatti ARM64
         uses: actions/upload-artifact@v4

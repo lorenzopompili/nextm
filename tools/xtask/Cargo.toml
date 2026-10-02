@@ -1,6 +1,6 @@
 [package]
 name = "xtask"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
 publish = false
 description = "Strumenti di sviluppo di nextm: controllo degli import, cricchetto sulla dimensione, bench"

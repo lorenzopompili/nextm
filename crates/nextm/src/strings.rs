@@ -80,6 +80,9 @@ pub struct Strings {
     pub menu_system_group: &'static [u16],
     pub menu_restart_admin: &'static [u16],
     pub menu_autostart_admin: &'static [u16],
+    pub menu_check_updates: &'static [u16],
+    pub inspect_btn_check_updates: &'static [u16],
+    pub inspect_btn_download_update: &'static [u16],
 }
 
 pub static IT: Strings = Strings {
@@ -157,6 +160,9 @@ pub static IT: Strings = Strings {
     menu_system_group: wide!("Sistema e avvio"),
     menu_restart_admin: wide!("🛡️ Esegui come Amministratore"),
     menu_autostart_admin: wide!("🛡️ Avvia come Amministratore all'accesso"),
+    menu_check_updates: wide!("Controlla aggiornamenti…"),
+    inspect_btn_check_updates: wide!("Controlla aggiornamenti"),
+    inspect_btn_download_update: wide!("Scarica aggiornamento"),
 };
 
 pub static EN: Strings = Strings {
@@ -232,6 +238,9 @@ pub static EN: Strings = Strings {
     menu_system_group: wide!("System and autostart"),
     menu_restart_admin: wide!("🛡️ Run as Administrator"),
     menu_autostart_admin: wide!("🛡️ Start as Administrator on logon"),
+    menu_check_updates: wide!("Check for updates…"),
+    inspect_btn_check_updates: wide!("Check for updates"),
+    inspect_btn_download_update: wide!("Download update"),
 };
 
 /// Testi per una lingua dell'interfaccia (LANGID di Windows): italiano o, altrimenti, inglese.

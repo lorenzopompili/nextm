@@ -1179,6 +1179,10 @@ impl InspectWindow {
         }
     }
 
+    pub fn hwnd(&self) -> HWND {
+        self.hwnd
+    }
+
     pub fn is_visible(&self) -> bool {
         unsafe { windows_sys::Win32::UI::WindowsAndMessaging::IsWindowVisible(self.hwnd) != 0 }
     }
@@ -1742,6 +1746,11 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
         if st.active_tab == InspectTab::Settings {
             drop(guard);
             if handle_settings_click(x, y, w, h) {
+                needs_repaint = true;
+            }
+        } else if st.active_tab == InspectTab::Info {
+            drop(guard);
+            if handle_info_click(hwnd, x, y, w, h) {
                 needs_repaint = true;
             }
         }
@@ -2328,6 +2337,103 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
             SetTextColor(mem_dc, badge_color);
             let badge_wstr: Vec<u16> = status_badge.encode_utf16().collect();
             TextOutW(mem_dc, start_x + 115, start_y + 80, badge_wstr.as_ptr(), badge_wstr.len() as i32);
+
+            // Controllo aggiornamenti (pulsante e stato nell'angolo in alto a destra)
+            let update_state = crate::sys::update::get_update_state();
+            let btn_w = 210;
+            let btn_x2 = w - start_x;
+            let btn_x1 = btn_x2 - btn_w;
+            let btn_y = start_y + 8;
+
+            let is_checking = update_state == crate::sys::update::UpdateState::Checking;
+            let btn_bg = if is_checking { active_tab_bg } else { inactive_tab_bg };
+            let b_brush = CreateSolidBrush(btn_bg);
+            let btn_rc = RECT { left: btn_x1, top: btn_y, right: btn_x2, bottom: btn_y + 26 };
+            FillRect(mem_dc, &btn_rc, b_brush);
+            DeleteObject(b_brush);
+
+            let b_border = CreateSolidBrush(border_color);
+            FrameRect(mem_dc, &btn_rc, b_border);
+            DeleteObject(b_border);
+
+            SelectObject(mem_dc, st.fonts.btn);
+            SetTextColor(mem_dc, if is_checking { 0x00FFFFFF } else { text_normal });
+            let btn_label = if is_checking {
+                if is_it { "⏳ Verifica in corso…" } else { "⏳ Checking…" }
+            } else {
+                if is_it { "🔄 Controlla aggiornamenti" } else { "🔄 Check for updates" }
+            };
+            let bl_wstr: Vec<u16> = btn_label.encode_utf16().collect();
+            let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
+            GetTextExtentPoint32W(mem_dc, bl_wstr.as_ptr(), bl_wstr.len() as i32, &mut sz);
+            let tx = btn_x1 + (btn_w - sz.cx) / 2;
+            let ty = btn_y + (26 - sz.cy) / 2;
+            TextOutW(mem_dc, tx, ty, bl_wstr.as_ptr(), bl_wstr.len() as i32);
+
+            // Stato dell'aggiornamento
+            SelectObject(mem_dc, st.fonts.badge);
+            let (status_text, status_color, has_download_btn) = match &update_state {
+                crate::sys::update::UpdateState::Idle => (
+                    (if is_it { "Verifica su GitHub Releases" } else { "Checks GitHub Releases" }).to_string(),
+                    text_dim,
+                    false,
+                ),
+                crate::sys::update::UpdateState::Checking => (
+                    (if is_it { "Connessione ad api.github.com..." } else { "Connecting to api.github.com..." })
+                        .to_string(),
+                    text_yellow,
+                    false,
+                ),
+                crate::sys::update::UpdateState::UpToDate { version } => (
+                    if is_it {
+                        format!("✔ Versione aggiornata ({version})")
+                    } else {
+                        format!("✔ Up to date ({version})")
+                    },
+                    text_cyan,
+                    false,
+                ),
+                crate::sys::update::UpdateState::NewVersion { version, .. } => (
+                    if is_it {
+                        format!("★ Nuova versione {version}!")
+                    } else {
+                        format!("★ New version {version}!")
+                    },
+                    0x0020D000,
+                    true,
+                ),
+                crate::sys::update::UpdateState::Error(err) => {
+                    (if is_it { format!("✖ Errore: {err}") } else { format!("✖ Error: {err}") }, 0x005050FF, false)
+                }
+            };
+            SetTextColor(mem_dc, status_color);
+            let st_wstr: Vec<u16> = status_text.encode_utf16().collect();
+            let mut st_sz: windows_sys::Win32::Foundation::SIZE = zeroed();
+            GetTextExtentPoint32W(mem_dc, st_wstr.as_ptr(), st_wstr.len() as i32, &mut st_sz);
+            let st_tx = btn_x1 + (btn_w - st_sz.cx) / 2;
+            TextOutW(mem_dc, st_tx, btn_y + 32, st_wstr.as_ptr(), st_wstr.len() as i32);
+
+            if has_download_btn {
+                let dl_y = btn_y + 54;
+                let dl_rc = RECT { left: btn_x1, top: dl_y, right: btn_x2, bottom: dl_y + 26 };
+                let dl_brush = CreateSolidBrush(active_tab_bg);
+                FillRect(mem_dc, &dl_rc, dl_brush);
+                DeleteObject(dl_brush);
+
+                let dl_border = CreateSolidBrush(border_color);
+                FrameRect(mem_dc, &dl_rc, dl_border);
+                DeleteObject(dl_border);
+
+                SelectObject(mem_dc, st.fonts.btn);
+                SetTextColor(mem_dc, 0x00FFFFFF);
+                let dl_label = if is_it { "⬇ Scarica aggiornamento" } else { "⬇ Download update" };
+                let dl_wstr: Vec<u16> = dl_label.encode_utf16().collect();
+                let mut dlsz: windows_sys::Win32::Foundation::SIZE = zeroed();
+                GetTextExtentPoint32W(mem_dc, dl_wstr.as_ptr(), dl_wstr.len() as i32, &mut dlsz);
+                let dltx = btn_x1 + (btn_w - dlsz.cx) / 2;
+                let dlty = dl_y + (26 - dlsz.cy) / 2;
+                TextOutW(mem_dc, dltx, dlty, dl_wstr.as_ptr(), dl_wstr.len() as i32);
+            }
 
             SelectObject(mem_dc, font_title);
 
@@ -3419,6 +3525,15 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     };
     draw_label(cx3 + 14, card_y + 296, store_str, true, None);
 
+    draw_button(
+        cx3 + 14,
+        cx3 + card_w - 14,
+        card_y + 326,
+        false,
+        if is_it { "🔄 Controlla aggiornamenti..." } else { "🔄 Check for updates..." },
+        None,
+    );
+
     SelectObject(dc, old_font);
 }
 
@@ -3569,6 +3684,9 @@ fn handle_settings_click(x: i32, y: i32, w: i32, _h: i32) -> bool {
         } else if (cy + 182..cy + 206).contains(&y) {
             crate::app::execute_command(crate::app::CMD_SHOW_ICON);
             return true;
+        } else if (cy + 326..cy + 350).contains(&y) {
+            crate::app::execute_command(crate::app::CMD_CHECK_UPDATES);
+            return true;
         }
     }
 
@@ -3590,6 +3708,34 @@ fn handle_settings_click(x: i32, y: i32, w: i32, _h: i32) -> bool {
             return true;
         } else if (l3_x1..l3_x2).contains(&x) {
             crate::app::execute_command(crate::app::CMD_LANG_EN);
+            return true;
+        }
+    }
+
+    false
+}
+
+fn handle_info_click(hwnd: HWND, x: i32, y: i32, w: i32, _h: i32) -> bool {
+    let start_x = 40;
+    let start_y = 65;
+    let btn_w = 210;
+    let btn_x2 = w - start_x;
+    let btn_x1 = btn_x2 - btn_w;
+    let btn_y = start_y + 8;
+
+    // Click sul pulsante "Controlla aggiornamenti"
+    if (btn_x1..btn_x2).contains(&x) && (btn_y..btn_y + 26).contains(&y) {
+        crate::sys::update::check_for_updates_async(Some(hwnd));
+        return true;
+    }
+
+    // Click sul pulsante "Scarica aggiornamento" (se presente)
+    let update_state = crate::sys::update::get_update_state();
+    if let crate::sys::update::UpdateState::NewVersion { url, .. } = update_state {
+        let dl_y = btn_y + 54;
+        if (btn_x1..btn_x2).contains(&x) && (dl_y..dl_y + 26).contains(&y) {
+            let url_wstr: Vec<u16> = url.encode_utf16().chain(core::iter::once(0)).collect();
+            crate::sys::shell::open_with_explorer(&url_wstr);
             return true;
         }
     }

@@ -125,26 +125,17 @@ pub fn run(args: Args) -> Result<Verdict, CliError> {
 
     let _ = fs::remove_file(&zip_path);
 
-    // Usa tar -a -cf se disponibile, altrimenti PowerShell Compress-Archive
-    let zip_status = Command::new("tar")
-        .args(["-a", "-cf", &zip_path.to_string_lossy(), "-C", &tmp_portable.to_string_lossy(), "."])
-        .status();
-
-    let zip_ok = match zip_status {
-        Ok(s) if s.success() => true,
-        _ => {
-            let ps_cmd = format!(
-                "Compress-Archive -Path '{}\\*' -DestinationPath '{}' -Force",
-                tmp_portable.to_string_lossy(),
-                zip_path.to_string_lossy()
-            );
-            Command::new("powershell")
-                .args(["-NoProfile", "-Command", &ps_cmd])
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false)
-        }
-    };
+    // Usa PowerShell Compress-Archive per produrre uno ZIP pulito e nativo compatibile con Esplora File di Windows
+    let ps_cmd = format!(
+        "Compress-Archive -Path '{}\\*' -DestinationPath '{}' -Force",
+        tmp_portable.to_string_lossy(),
+        zip_path.to_string_lossy()
+    );
+    let zip_ok = Command::new("powershell")
+        .args(["-NoProfile", "-Command", &ps_cmd])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
 
     let _ = fs::remove_dir_all(&tmp_portable);
 

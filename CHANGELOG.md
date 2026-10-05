@@ -5,7 +5,19 @@ Tutte le modifiche rilevanti di nextm sono annotate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto usa il
 [versionamento semantico](https://semver.org/lang/it/).
 
-## [Non rilasciato]
+## [0.1.2] - 2026-10-05
+
+### Aggiunto
+- **Spazio dischi montati su hover**:
+  - Scansione dinamica e live di tutte le unità disco montate (SSD, HDD, chiavette e dischi esterni USB) tramite `GetLogicalDrives` e `GetDiskFreeSpaceExW`.
+  - Visualizzazione nel riquadro popup hover di: lettera unità, percentuale occupata, barra progressiva grafica, spazio occupato e spazio rimanente in formato chiaro (TB, GB, MB).
+  - Rilevamento in tempo reale: collegamento e scollegamento istantaneo di drive e chiavette USB senza riavvio e senza cache.
+  - Opzione "Spazio dischi su hover" nella scheda Impostazioni (Prestazioni & Calcolo) per abilitare o disabilitare la visualizzazione.
+- **Collegamenti ipertestuali e versione dinamica**:
+  - Versione dinamica automatica sincronizzata da `env!("CARGO_PKG_VERSION")` nella scheda Informazioni.
+  - Hyperlink con cursore a manina (`IDC_HAND`) per contatto autore via email (`mailto:lorenzo.pompili@gmail.com`) e pagina GitHub (`https://github.com/lorenzopompili/nextm`).
+
+## [0.1.1] - 2026-10-02
 
 ### Aggiunto (milestone M4: Finestra Unificata di Ispezione, Impostazioni integrate, Installer Inno Setup e Ottimizzazioni GDI)
 

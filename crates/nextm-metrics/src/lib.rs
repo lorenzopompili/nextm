@@ -4,6 +4,7 @@
 //! testabile ovunque. Il modulo `sys` legge i contatori di Windows.
 
 pub mod cpu;
+pub mod disk;
 pub mod inspect;
 pub mod level;
 pub mod net;

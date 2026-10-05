@@ -277,6 +277,7 @@ mod tests {
     #[test]
     fn version_comparison() {
         assert!(is_newer("v0.2.0", "0.1.0"));
+        assert!(is_newer("v0.1.2", "0.1.1"));
         assert!(is_newer("v0.1.1", "0.1.0"));
         assert!(is_newer("1.0.0", "0.1.0"));
         assert!(!is_newer("v0.1.0", "0.1.0"));

@@ -1,6 +1,7 @@
 //! Campionatori che leggono i contatori di Windows.
 
 pub mod cpu;
+pub mod disk;
 pub mod dll;
 pub mod inspect_engine;
 pub mod net;

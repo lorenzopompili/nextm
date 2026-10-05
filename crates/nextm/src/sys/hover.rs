@@ -70,6 +70,9 @@ pub struct HoverSnapshot {
     pub temp_disk_active: bool,
     pub temp_disk_c: Option<i16>,
     pub temp_disk_label: Option<String>,
+
+    pub disk_space_active: bool,
+    pub mounted_disks: Vec<nextm_metrics::disk::MountedDisk>,
 }
 
 impl Default for HoverSnapshot {
@@ -101,6 +104,8 @@ impl Default for HoverSnapshot {
             temp_disk_active: false,
             temp_disk_c: None,
             temp_disk_label: None,
+            disk_space_active: true,
+            mounted_disks: Vec::new(),
         }
     }
 }
@@ -319,7 +324,13 @@ unsafe fn apply_dwm_styling(hwnd: HWND, is_dark: bool) {
 
 fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
     let scale = data.dpi as f32 / 96.0;
-    let base_w = if data.cpu_cores.as_ref().is_some_and(|c| c.len() > 16) { 340.0 } else { 300.0 };
+    let base_w = if data.cpu_cores.as_ref().is_some_and(|c| c.len() > 16) {
+        340.0
+    } else if data.disk_space_active && !data.mounted_disks.is_empty() {
+        320.0
+    } else {
+        300.0
+    };
     let width = (base_w * scale) as i32;
 
     let pad_y = (12.0 * scale) as i32;
@@ -382,7 +393,7 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
         if has_prev_group {
             h += group_gap;
         }
-        // has_prev_group = true;
+        has_prev_group = true;
 
         h += line_h; // Title: Temperature
         if data.temp_acpi_active {
@@ -394,6 +405,17 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
         if data.temp_disk_active {
             h += line_h;
         }
+    }
+
+    let has_disks = data.disk_space_active && !data.mounted_disks.is_empty();
+    if has_disks {
+        if has_prev_group {
+            h += group_gap;
+        }
+        // has_prev_group = true;
+
+        h += line_h; // Title: Dischi / Drives
+        h += data.mounted_disks.len() as i32 * line_h;
     }
 
     (width, h.max((50.0 * scale) as i32))
@@ -680,7 +702,7 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
         if has_prev_group {
             cur_y += group_gap;
         }
-        // has_prev_group = true;
+        has_prev_group = true;
 
         SelectObject(mem_dc, font_title);
         SetTextColor(mem_dc, text_bright);
@@ -761,6 +783,48 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
         }
     }
 
+    // 5. Dischi montati (spazio occupato e rimanente)
+    let has_disks = data.disk_space_active && !data.mounted_disks.is_empty();
+    if has_disks {
+        if has_prev_group {
+            cur_y += group_gap;
+        }
+        // has_prev_group = true;
+
+        SelectObject(mem_dc, font_title);
+        SetTextColor(mem_dc, text_bright);
+        let disk_title = if data.is_it { wide!("Dischi") } else { wide!("Drives") };
+        TextOutW(mem_dc, pad_x, cur_y, disk_title.as_ptr(), (disk_title.len().saturating_sub(1)) as i32);
+        cur_y += line_h;
+
+        SelectObject(mem_dc, font_body);
+
+        for disk in &data.mounted_disks {
+            let used = nextm_metrics::disk::format_disk_size(disk.used_bytes(), data.is_it);
+            let free = nextm_metrics::disk::format_disk_size(disk.free_bytes, data.is_it);
+            let pct = disk.used_percent();
+
+            if pct >= 90 {
+                SetTextColor(mem_dc, text_amber);
+            } else {
+                SetTextColor(mem_dc, text_normal);
+            }
+
+            let mut d_buf = WBuf::<128>::new();
+            d_buf.push(disk.letter as u16);
+            d_buf.push_str(": ");
+            d_buf.push_str(&used);
+            d_buf.push_str(if data.is_it { " occupati · " } else { " used · " });
+            d_buf.push_str(&free);
+            d_buf.push_str(if data.is_it { " liberi (" } else { " free (" });
+            d_buf.push_u32(u32::from(pct));
+            d_buf.push_str("%)");
+
+            TextOutW(mem_dc, sub_pad, cur_y, d_buf.as_slice().as_ptr(), d_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+    }
+
     let _ = cur_y;
 
     BitBlt(hdc, 0, 0, w, h, mem_dc, 0, 0, SRCCOPY);
@@ -799,4 +863,31 @@ unsafe fn create_gdi_font(dpi: u32, pt_size: i32, weight: i32, monospace: bool) 
         0,
         font_name.as_ptr(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nextm_metrics::disk::MountedDisk;
+
+    #[test]
+    fn calculate_dimensions_includes_mounted_disks() {
+        let mut snapshot = HoverSnapshot::default();
+        let (w_no_disks, h_no_disks) = calculate_dimensions(&snapshot);
+
+        snapshot.mounted_disks =
+            vec![MountedDisk::new('C', 1_000_000_000, 200_000_000), MountedDisk::new('D', 2_000_000_000, 500_000_000)];
+        let (w_with_disks, h_with_disks) = calculate_dimensions(&snapshot);
+
+        // Larghezza base aumenta a 320px
+        assert!(w_with_disks >= w_no_disks);
+        // Altezza include titolo + 2 dischi + gap
+        assert!(h_with_disks > h_no_disks);
+
+        // Se disabilitato da impostazioni, l'altezza torna identica
+        snapshot.disk_space_active = false;
+        let (w_disabled, h_disabled) = calculate_dimensions(&snapshot);
+        assert_eq!(w_disabled, w_no_disks);
+        assert_eq!(h_disabled, h_no_disks);
+    }
 }

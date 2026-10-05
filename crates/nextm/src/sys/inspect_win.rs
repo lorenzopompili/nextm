@@ -30,8 +30,8 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{ReleaseCapture, SetCapture
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CreateWindowExW, DI_NORMAL, DefWindowProcW, DestroyIcon, DestroyWindow, DrawIconEx,
     ES_AUTOHSCROLL, GetClientRect, GetForegroundWindow, GetSystemMetrics, GetWindowTextLengthW, GetWindowTextW, HICON,
-    HTCLIENT, HWND_TOP, IDC_ARROW, IDC_SIZEWE, IMAGE_ICON, KillTimer, LR_DEFAULTCOLOR, LoadCursorW, LoadImageW,
-    RegisterClassExW, SM_CXSCREEN, SM_CYSCREEN, SW_HIDE, SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER,
+    HTCLIENT, HWND_TOP, IDC_ARROW, IDC_HAND, IDC_SIZEWE, IMAGE_ICON, KillTimer, LR_DEFAULTCOLOR, LoadCursorW,
+    LoadImageW, RegisterClassExW, SM_CXSCREEN, SM_CYSCREEN, SW_HIDE, SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER,
     SendMessageW, SetCursor, SetForegroundWindow, SetTimer, SetWindowPos, SetWindowTextW, ShowWindow, WM_CLOSE,
     WM_COMMAND, WM_CTLCOLOREDIT, WM_CTLCOLORSTATIC, WM_ERASEBKGND, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
     WM_LBUTTONUP, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_SETCURSOR, WM_SETFONT, WM_SETICON, WM_SIZE, WM_TIMER,
@@ -297,7 +297,10 @@ struct InspectState {
     is_dragging_scrollbar: bool,
     scrollbar_drag_start_y: i32,
     scrollbar_drag_start_scroll: i32,
+    last_mouse_x: i32,
     last_mouse_y: i32,
+    info_author_rect: RECT,
+    info_repo_rect: RECT,
 
     edit_brush_dark: HBRUSH,
     edit_brush_light: HBRUSH,
@@ -1163,7 +1166,10 @@ impl InspectWindow {
                 is_dragging_scrollbar: false,
                 scrollbar_drag_start_y: 0,
                 scrollbar_drag_start_scroll: 0,
+                last_mouse_x: 0,
                 last_mouse_y: 0,
+                info_author_rect: zeroed(),
+                info_repo_rect: zeroed(),
                 edit_brush_dark: CreateSolidBrush(0x002B2B2B),
                 edit_brush_light: CreateSolidBrush(0x00FFFFFF),
                 icon_96: LoadImageW(instance, make_int_resource(1), IMAGE_ICON, 96, 96, LR_DEFAULTCOLOR) as HICON,
@@ -1429,23 +1435,36 @@ unsafe extern "system" fn inspect_wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, 
         WM_SETCURSOR => {
             let hit_test = (lparam & 0xFFFF) as u32;
             if hit_test == HTCLIENT {
-                let is_we = STATE.with(|cell| {
+                let cursor = STATE.with(|cell| {
                     cell.borrow()
                         .as_ref()
                         .map(|st| {
-                            st.resizing_col.is_some()
+                            if st.resizing_col.is_some()
                                 || (st.active_tab != InspectTab::Info
                                     && st.active_tab != InspectTab::Settings
                                     && (46..74).contains(&st.last_mouse_y)
                                     && st.hover_col_sep.is_some())
+                            {
+                                IDC_SIZEWE
+                            } else if st.active_tab == InspectTab::Info {
+                                let x = st.last_mouse_x;
+                                let y = st.last_mouse_y;
+                                if ((st.info_author_rect.left..=st.info_author_rect.right).contains(&x)
+                                    && (st.info_author_rect.top..=st.info_author_rect.bottom).contains(&y))
+                                    || ((st.info_repo_rect.left..=st.info_repo_rect.right).contains(&x)
+                                        && (st.info_repo_rect.top..=st.info_repo_rect.bottom).contains(&y))
+                                {
+                                    IDC_HAND
+                                } else {
+                                    IDC_ARROW
+                                }
+                            } else {
+                                IDC_ARROW
+                            }
                         })
-                        .unwrap_or(false)
+                        .unwrap_or(IDC_ARROW)
                 });
-                if is_we {
-                    unsafe { SetCursor(LoadCursorW(null_mut(), IDC_SIZEWE)) };
-                    return 1;
-                }
-                unsafe { SetCursor(LoadCursorW(null_mut(), IDC_ARROW)) };
+                unsafe { SetCursor(LoadCursorW(null_mut(), cursor)) };
                 return 1;
             }
             unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
@@ -1872,6 +1891,7 @@ fn on_mouse_move(hwnd: HWND, x: i32, y: i32) {
     STATE.with(|cell| {
         let mut guard = cell.borrow_mut();
         let Some(st) = guard.as_mut() else { return };
+        st.last_mouse_x = x;
         st.last_mouse_y = y;
 
         // Trascinamento barra di scorrimento
@@ -2190,8 +2210,8 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
     let old_bmp = SelectObject(mem_dc, mem_bmp);
 
     STATE.with(|cell| {
-        let guard = cell.borrow();
-        let Some(st) = guard.as_ref() else { return };
+        let mut guard = cell.borrow_mut();
+        let Some(st) = guard.as_mut() else { return };
 
         let is_dark = st.is_dark;
         let s = st.s;
@@ -2305,13 +2325,46 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
             let sub_wstr: Vec<u16> = sub_text.encode_utf16().collect();
             TextOutW(mem_dc, start_x + 115, start_y + 36, sub_wstr.as_ptr(), sub_wstr.len() as i32);
 
-            let v_text = if is_it {
-                "v0.1.0 • x86_64 • Sviluppato da Lorenzo Pompili"
-            } else {
-                "v0.1.0 • x86_64 • Developed by Lorenzo Pompili"
-            };
-            let v_wstr: Vec<u16> = v_text.encode_utf16().collect();
-            TextOutW(mem_dc, start_x + 115, start_y + 58, v_wstr.as_ptr(), v_wstr.len() as i32);
+            let line_y = start_y + 58;
+            let mut cur_x = start_x + 115;
+
+            // Prefisso: "v{version} • x86_64 • Sviluppato da " / "Developed by "
+            SetTextColor(mem_dc, text_dim);
+            let prefix = format!(
+                "v{} • x86_64 • {}",
+                env!("CARGO_PKG_VERSION"),
+                if is_it { "Sviluppato da " } else { "Developed by " }
+            );
+            let p_wstr: Vec<u16> = prefix.encode_utf16().collect();
+            let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
+            GetTextExtentPoint32W(mem_dc, p_wstr.as_ptr(), p_wstr.len() as i32, &mut sz);
+            TextOutW(mem_dc, cur_x, line_y, p_wstr.as_ptr(), p_wstr.len() as i32);
+            cur_x += sz.cx;
+
+            // Link autore Lorenzo Pompili (email)
+            SetTextColor(mem_dc, text_cyan);
+            let author = "Lorenzo Pompili";
+            let a_wstr: Vec<u16> = author.encode_utf16().collect();
+            GetTextExtentPoint32W(mem_dc, a_wstr.as_ptr(), a_wstr.len() as i32, &mut sz);
+            TextOutW(mem_dc, cur_x, line_y, a_wstr.as_ptr(), a_wstr.len() as i32);
+            st.info_author_rect = RECT { left: cur_x, top: line_y, right: cur_x + sz.cx, bottom: line_y + sz.cy };
+            cur_x += sz.cx;
+
+            // Separatore
+            SetTextColor(mem_dc, text_dim);
+            let sep = " • GitHub: ";
+            let s_wstr: Vec<u16> = sep.encode_utf16().collect();
+            GetTextExtentPoint32W(mem_dc, s_wstr.as_ptr(), s_wstr.len() as i32, &mut sz);
+            TextOutW(mem_dc, cur_x, line_y, s_wstr.as_ptr(), s_wstr.len() as i32);
+            cur_x += sz.cx;
+
+            // Link repository GitHub
+            SetTextColor(mem_dc, text_cyan);
+            let repo = "lorenzopompili/nextm";
+            let r_wstr: Vec<u16> = repo.encode_utf16().collect();
+            GetTextExtentPoint32W(mem_dc, r_wstr.as_ptr(), r_wstr.len() as i32, &mut sz);
+            TextOutW(mem_dc, cur_x, line_y, r_wstr.as_ptr(), r_wstr.len() as i32);
+            st.info_repo_rect = RECT { left: cur_x, top: line_y, right: cur_x + sz.cx, bottom: line_y + sz.cy };
 
             let is_elevated = crate::sys::elevation::is_elevated();
             SelectObject(mem_dc, st.fonts.badge);
@@ -3425,29 +3478,38 @@ unsafe fn paint_settings_page(dc: HDC, w: i32, h: i32, is_dark: bool, fonts: &In
     draw_label(
         cx2 + 14,
         card_y + 156,
-        if is_it { "Pausa a schermo off" } else { "Pause when display off" },
+        if is_it { "Spazio dischi su hover" } else { "Disk space on hover" },
         false,
         None,
     );
-    draw_toggle(b2_x1, b2_x2, card_y + 152, settings.pause_display, lbl_on, lbl_off);
+    draw_toggle(b2_x1, b2_x2, card_y + 152, settings.disk_space_hover, lbl_on, lbl_off);
 
     draw_label(
         cx2 + 14,
         card_y + 192,
-        if is_it { "Rallenta con risparmio" } else { "Slow with battery saver" },
+        if is_it { "Pausa a schermo off" } else { "Pause when display off" },
         false,
         None,
     );
-    draw_toggle(b2_x1, b2_x2, card_y + 188, settings.slow_energy_saver, lbl_on, lbl_off);
+    draw_toggle(b2_x1, b2_x2, card_y + 188, settings.pause_display, lbl_on, lbl_off);
 
     draw_label(
         cx2 + 14,
         card_y + 228,
+        if is_it { "Rallenta con risparmio" } else { "Slow with battery saver" },
+        false,
+        None,
+    );
+    draw_toggle(b2_x1, b2_x2, card_y + 224, settings.slow_energy_saver, lbl_on, lbl_off);
+
+    draw_label(
+        cx2 + 14,
+        card_y + 264,
         if is_it { "EcoQoS (Efficient Core)" } else { "EcoQoS (Efficient Cores)" },
         false,
         None,
     );
-    draw_toggle(b2_x1, b2_x2, card_y + 224, settings.ecoqos, lbl_on, lbl_off);
+    draw_toggle(b2_x1, b2_x2, card_y + 260, settings.ecoqos, lbl_on, lbl_off);
 
     // CARD 3: SISTEMA & PRIVILEGI
     let cx3 = start_x + (card_w + 15) * 2;
@@ -3649,12 +3711,15 @@ fn handle_settings_click(x: i32, y: i32, w: i32, _h: i32) -> bool {
             crate::app::execute_command(crate::app::CMD_CPU_PER_CORE);
             return true;
         } else if (cy + 152..cy + 176).contains(&y) {
-            crate::app::execute_command(crate::app::CMD_PAUSE_DISPLAY);
+            crate::app::execute_command(crate::app::CMD_DISK_SPACE_HOVER);
             return true;
         } else if (cy + 188..cy + 212).contains(&y) {
-            crate::app::execute_command(crate::app::CMD_SLOW_SAVER);
+            crate::app::execute_command(crate::app::CMD_PAUSE_DISPLAY);
             return true;
         } else if (cy + 224..cy + 248).contains(&y) {
+            crate::app::execute_command(crate::app::CMD_SLOW_SAVER);
+            return true;
+        } else if (cy + 260..cy + 284).contains(&y) {
             crate::app::execute_command(crate::app::CMD_ECOQOS);
             return true;
         }
@@ -3722,6 +3787,32 @@ fn handle_info_click(hwnd: HWND, x: i32, y: i32, w: i32, _h: i32) -> bool {
     let btn_x2 = w - start_x;
     let btn_x1 = btn_x2 - btn_w;
     let btn_y = start_y + 8;
+
+    // Click sul link email autore o link GitHub nell'intestazione
+    let (author_rc, repo_rc) = STATE
+        .with(|cell| cell.borrow().as_ref().map(|st| (st.info_author_rect, st.info_repo_rect)).unwrap_or_default());
+
+    if (author_rc.left..=author_rc.right).contains(&x) && (author_rc.top..=author_rc.bottom).contains(&y) {
+        let mailto = wide!("mailto:lorenzo.pompili@gmail.com");
+        crate::sys::shell::open_with_explorer(mailto);
+        return true;
+    }
+
+    if (repo_rc.left..=repo_rc.right).contains(&x) && (repo_rc.top..=repo_rc.bottom).contains(&y) {
+        let github = wide!("https://github.com/lorenzopompili/nextm");
+        crate::sys::shell::open_with_explorer(github);
+        return true;
+    }
+
+    // Click su Autore & Sviluppo nella Card 2
+    let card_y = start_y + 115;
+    let card_w = (w - start_x * 2 - 30) / 3;
+    let card2_x = start_x + card_w + 15;
+    if (card2_x + 14..card2_x + card_w - 14).contains(&x) && (card_y + 44..card_y + 82).contains(&y) {
+        let mailto = wide!("mailto:lorenzo.pompili@gmail.com");
+        crate::sys::shell::open_with_explorer(mailto);
+        return true;
+    }
 
     // Click sul pulsante "Controlla aggiornamenti"
     if (btn_x1..btn_x2).contains(&x) && (btn_y..btn_y + 26).contains(&y) {

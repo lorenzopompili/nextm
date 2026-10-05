@@ -93,6 +93,8 @@ pub struct Settings {
     pub saturation_mode: SaturationMode,
     /// Mostra l'impegno di ciascun core logico al passaggio del mouse sulla CPU.
     pub cpu_per_core_hover: bool,
+    /// Mostra lo spazio occupato e rimanente per ciascuna unità disco montata al passaggio del mouse.
+    pub disk_space_hover: bool,
     /// Modalità di selezione dell'interfaccia di rete.
     pub net_mode: NetMode,
     /// Identificatore LUID dell'interfaccia specifica (se `net_mode == Specific`).
@@ -123,6 +125,7 @@ impl Default for Settings {
             cpu_mode: CpuMode::Standard,
             saturation_mode: SaturationMode::Always,
             cpu_per_core_hover: false,
+            disk_space_hover: true,
             net_mode: NetMode::Sum,
             net_luid: 0,
             net_bits: false,
@@ -133,7 +136,7 @@ impl Default for Settings {
 
 impl Settings {
     /// Le coppie da salvare, sempre nello stesso ordine.
-    pub fn to_pairs(self) -> [(&'static str, u32); 18] {
+    pub fn to_pairs(self) -> [(&'static str, u32); 19] {
         let mut power = 0;
         if self.pause_display {
             power |= POWER_PAUSE_DISPLAY;
@@ -177,6 +180,7 @@ impl Settings {
                 },
             ),
             ("CpuPerCoreHover", u32::from(self.cpu_per_core_hover)),
+            ("DiskSpaceHover", u32::from(self.disk_space_hover)),
             (
                 "NetMode",
                 match self.net_mode {
@@ -217,6 +221,7 @@ impl Settings {
             _ => SaturationMode::Always,
         };
         let cpu_per_core_hover = get("CpuPerCoreHover").is_some_and(|v| v != 0);
+        let disk_space_hover = get("DiskSpaceHover").map_or(d.disk_space_hover, |v| v != 0);
         let net_mode = match get("NetMode").unwrap_or(0) {
             1 => NetMode::Auto,
             2 => NetMode::Specific,
@@ -244,6 +249,7 @@ impl Settings {
             cpu_mode,
             saturation_mode,
             cpu_per_core_hover,
+            disk_space_hover,
             net_mode,
             net_luid,
             net_bits,
@@ -314,6 +320,7 @@ mod tests {
         assert_eq!(d.cpu_mode, CpuMode::Standard);
         assert_eq!(d.saturation_mode, SaturationMode::Always);
         assert!(!d.cpu_per_core_hover);
+        assert!(d.disk_space_hover);
         assert_eq!(d.net_mode, NetMode::Sum);
         assert_eq!(d.net_luid, 0);
         assert!(!d.net_bits);
@@ -337,6 +344,7 @@ mod tests {
             cpu_mode: CpuMode::Utility,
             saturation_mode: SaturationMode::OnDemand,
             cpu_per_core_hover: true,
+            disk_space_hover: false,
             net_mode: NetMode::Specific,
             net_luid: 0x1234_5678_9ABC_DEF0,
             net_bits: true,

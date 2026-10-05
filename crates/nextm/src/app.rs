@@ -111,6 +111,7 @@ pub const CMD_CPU_PER_CORE: u32 = 204;
 pub const CMD_CPU_ICON_SYMBOL: u32 = 205;
 pub const CMD_ICON_SYMBOLS_OFF: u32 = 206;
 pub const CMD_ICON_SYMBOLS_ON: u32 = 207;
+pub const CMD_DISK_SPACE_HOVER: u32 = 208;
 pub const CMD_SAT_ALWAYS: u32 = 210;
 pub const CMD_SAT_ONDEMAND: u32 = 211;
 pub const CMD_SAT_OFF: u32 = 212;
@@ -1367,6 +1368,9 @@ impl App {
         let selected_gpu =
             self.gpu_adapters.iter().find(|a| a.luid == self.settings.gpu_luid).or_else(|| self.gpu_adapters.first());
 
+        let mounted_disks =
+            if self.settings.disk_space_hover { nextm_metrics::sys::disk::scan_mounted_disks() } else { Vec::new() };
+
         HoverSnapshot {
             is_dark: self.theme != Theme::Light,
             is_it,
@@ -1394,6 +1398,8 @@ impl App {
             temp_disk_active: self.settings.is_metric_active(METRIC_TEMP_DISK),
             temp_disk_c: self.temp_disk_c,
             temp_disk_label: self.temp_disk_label.clone(),
+            disk_space_active: self.settings.disk_space_hover,
+            mounted_disks,
         }
     }
 
@@ -1608,6 +1614,10 @@ impl App {
                     self.cpu.reset_per_core();
                     self.cpu_per_core = None;
                 }
+                self.on_settings_modified();
+            }
+            CMD_DISK_SPACE_HOVER => {
+                self.settings.disk_space_hover = !self.settings.disk_space_hover;
                 self.on_settings_modified();
             }
             CMD_SAT_ALWAYS => {

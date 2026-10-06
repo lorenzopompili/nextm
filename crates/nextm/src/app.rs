@@ -27,8 +27,8 @@ use nextm_metrics::sys::threads::ThreadScanner;
 use nextm_metrics::sys::utility::{UtilitySample, UtilitySampler, utility_bp};
 use nextm_metrics::temp::{GpuAdapter, temp_icon_text};
 use nextm_render::icon::{
-    StatusBar, draw_cpu_icon as render_cpu_icon, draw_dual_icon, draw_ram_icon, draw_static_icon, draw_temp_acpi_icon,
-    draw_temp_disk_icon, draw_temp_gpu_icon, draw_value_icon, draw_value_icon_with_bar,
+    StatusBar, draw_cpu_icon as render_cpu_icon, draw_dual_icon, draw_gpu_icon, draw_ram_icon, draw_static_icon,
+    draw_temp_acpi_icon, draw_temp_disk_icon, draw_temp_gpu_icon, draw_value_icon, draw_value_icon_with_bar,
 };
 use nextm_render::{Canvas, Color, Palette, Theme};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
@@ -41,9 +41,10 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::settings::{
-    CpuMode, ICON_CPU, ICON_NET, ICON_RAM, ICON_SYMBOL_CPU, ICON_SYMBOL_RAM, ICON_SYMBOL_TEMP_ACPI,
-    ICON_SYMBOL_TEMP_DISK, ICON_SYMBOL_TEMP_GPU, ICON_TEMP_ACPI, ICON_TEMP_DISK, ICON_TEMP_GPU, METRIC_CPU, METRIC_NET,
-    METRIC_RAM, METRIC_TEMP_ACPI, METRIC_TEMP_DISK, METRIC_TEMP_GPU, NetMode, SaturationMode, Settings,
+    CpuMode, ICON_CPU, ICON_GPU, ICON_NET, ICON_RAM, ICON_SYMBOL_CPU, ICON_SYMBOL_GPU, ICON_SYMBOL_RAM,
+    ICON_SYMBOL_TEMP_ACPI, ICON_SYMBOL_TEMP_DISK, ICON_SYMBOL_TEMP_GPU, ICON_TEMP_ACPI, ICON_TEMP_DISK, ICON_TEMP_GPU,
+    METRIC_CPU, METRIC_GPU, METRIC_NET, METRIC_RAM, METRIC_TEMP_ACPI, METRIC_TEMP_DISK, METRIC_TEMP_GPU, NetMode,
+    SaturationMode, Settings,
 };
 use crate::strings::{self, Strings};
 use crate::sys::autostart;
@@ -69,6 +70,7 @@ const ID_NET: u32 = 3;
 const ID_TEMP_ACPI: u32 = 4;
 const ID_TEMP_GPU: u32 = 5;
 const ID_TEMP_DISK: u32 = 6;
+const ID_GPU: u32 = 7;
 const ID_STATIC: u32 = 1;
 
 const TIMER_TICK: usize = 1;
@@ -115,6 +117,14 @@ pub const CMD_DISK_SPACE_HOVER: u32 = 208;
 pub const CMD_SAT_ALWAYS: u32 = 210;
 pub const CMD_SAT_ONDEMAND: u32 = 211;
 pub const CMD_SAT_OFF: u32 = 212;
+pub const CMD_HOVER_TOP_CPU: u32 = 213;
+pub const CMD_HOVER_TOP_RAM: u32 = 214;
+pub const CMD_HOVER_TOP_N_3: u32 = 215;
+pub const CMD_HOVER_TOP_N_5: u32 = 216;
+pub const CMD_HOVER_TOP_N_10: u32 = 217;
+pub const CMD_HOVER_SPARKLINES: u32 = 218;
+pub const CMD_HOVER_TOP_NET: u32 = 219;
+pub const CMD_HOVER_GPU: u32 = 228;
 
 pub const CMD_RAM_ACTIVE: u32 = 220;
 pub const CMD_RAM_ICON: u32 = 221;
@@ -137,6 +147,29 @@ pub const CMD_TEMP_GPU_SELECT_BASE: u32 = 280;
 pub const CMD_TEMP_DISK_ACTIVE: u32 = 290;
 pub const CMD_TEMP_DISK_ICON: u32 = 291;
 pub const CMD_TEMP_DISK_ICON_SYMBOL: u32 = 292;
+
+pub const CMD_TOP_CPU_INC: u32 = 301;
+pub const CMD_TOP_CPU_DEC: u32 = 302;
+pub const CMD_TOP_RAM_INC: u32 = 303;
+pub const CMD_TOP_RAM_DEC: u32 = 304;
+pub const CMD_TOP_NET_INC: u32 = 305;
+pub const CMD_TOP_NET_DEC: u32 = 306;
+
+pub const CMD_ALERT_CPU_TOGGLE: u32 = 310;
+pub const CMD_ALERT_CPU_INC: u32 = 311;
+pub const CMD_ALERT_CPU_DEC: u32 = 312;
+pub const CMD_ALERT_RAM_TOGGLE: u32 = 313;
+pub const CMD_ALERT_RAM_INC: u32 = 314;
+pub const CMD_ALERT_RAM_DEC: u32 = 315;
+pub const CMD_ALERT_DISK_TOGGLE: u32 = 316;
+pub const CMD_ALERT_DISK_INC: u32 = 317;
+pub const CMD_ALERT_DISK_DEC: u32 = 318;
+
+pub const CMD_GPU_ACTIVE: u32 = 320;
+pub const CMD_GPU_ICON: u32 = 321;
+pub const CMD_GPU_ICON_SYMBOL: u32 = 322;
+pub const CMD_BLACKBOX_TOGGLE: u32 = 330;
+pub const CMD_BLACKBOX_OPEN_DIR: u32 = 331;
 
 static MSG_TASKBAR_CREATED: AtomicU32 = AtomicU32::new(u32::MAX);
 static MSG_ACTIVATE: AtomicU32 = AtomicU32::new(u32::MAX);
@@ -165,6 +198,7 @@ enum After {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Balloon {
     FirstRun,
+    Alert,
     Other,
 }
 
@@ -188,6 +222,15 @@ struct DrawKeyRam {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+struct DrawKeyGpu {
+    percent: Option<u8>,
+    level: Level,
+    size: u32,
+    palette: Palette,
+    symbol: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 struct DrawKeyNet {
     down: [u8; 4],
     up: [u8; 4],
@@ -203,6 +246,8 @@ struct DrawKeyTemp {
     symbol: bool,
 }
 
+type CachedTopProcs = (Vec<(String, String)>, Vec<(String, String)>, Vec<(String, String)>);
+
 pub struct App {
     hwnd: HWND,
     s: &'static Strings,
@@ -212,6 +257,7 @@ pub struct App {
 
     tray_cpu: Option<TrayIcon>,
     tray_ram: Option<TrayIcon>,
+    tray_gpu: Option<TrayIcon>,
     tray_net: Option<TrayIcon>,
     tray_temp_acpi: Option<TrayIcon>,
     tray_temp_gpu: Option<TrayIcon>,
@@ -278,6 +324,7 @@ pub struct App {
     gpu_adapters: Vec<GpuAdapter>,
     last_gpu_tick: u64,
     drawn_temp_gpu: Option<DrawKeyTemp>,
+    drawn_gpu: Option<DrawKeyGpu>,
 
     disk_sampler: Option<DiskSampler>,
     temp_disk_c: Option<i16>,
@@ -286,6 +333,20 @@ pub struct App {
     drawn_temp_disk: Option<DrawKeyTemp>,
 
     hover_win: Option<HoverWindow>,
+    top_proc_tracker: Option<nextm_metrics::sys::process_top::TopProcessTracker>,
+    cached_top_procs: CachedTopProcs,
+    last_top_proc_sample_ms: u64,
+    disk_speed_sampler: Option<nextm_metrics::sys::disk::DiskSpeedSampler>,
+    cpu_throttled: bool,
+    cpu_mhz: Option<u32>,
+    last_throttle_check: u64,
+    blackbox: Option<crate::sys::blackbox::BlackboxRecorder>,
+    cpu_history: Vec<u8>,
+    ram_history: Vec<u8>,
+    net_history: Vec<u32>,
+    gpu_metrics_sampler: Option<nextm_metrics::sys::gpu::GpuMetricsSampler>,
+    gpu_stats: Option<nextm_metrics::sys::gpu::GpuStats>,
+    last_gpu_metrics_tick: u64,
     inspect_win: Option<InspectWindow>,
     last_inspect_toggle: u64,
     tip_sent: TipBuf,
@@ -296,6 +357,10 @@ pub struct App {
     energy_saver: bool,
     display_notify: Option<PowerNotify>,
     saver_notify: Option<PowerNotify>,
+    last_cpu_alert_tick: u64,
+    last_ram_alert_tick: u64,
+    last_disk_alert_tick: u64,
+    cpu_high_since: u64,
     balloon: Option<Balloon>,
     portable_readonly: bool,
 }
@@ -506,6 +571,7 @@ impl App {
             exe: std::env::current_exe().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
             tray_cpu: None,
             tray_ram: None,
+            tray_gpu: None,
             tray_net: None,
             tray_temp_acpi: None,
             tray_temp_gpu: None,
@@ -558,12 +624,27 @@ impl App {
             gpu_adapters: Vec::new(),
             last_gpu_tick: 0,
             drawn_temp_gpu: None,
+            drawn_gpu: None,
             disk_sampler: None,
             temp_disk_c: None,
             temp_disk_label: None,
             last_disk_tick: 0,
             drawn_temp_disk: None,
             hover_win: HoverWindow::new(hwnd),
+            top_proc_tracker: Some(nextm_metrics::sys::process_top::TopProcessTracker::new()),
+            cached_top_procs: (Vec::new(), Vec::new(), Vec::new()),
+            last_top_proc_sample_ms: 0,
+            disk_speed_sampler: Some(nextm_metrics::sys::disk::DiskSpeedSampler::new()),
+            cpu_throttled: false,
+            cpu_mhz: None,
+            last_throttle_check: 0,
+            blackbox: None,
+            cpu_history: Vec::new(),
+            ram_history: Vec::new(),
+            net_history: Vec::new(),
+            gpu_metrics_sampler: None,
+            gpu_stats: None,
+            last_gpu_metrics_tick: 0,
             inspect_win: InspectWindow::new(s),
             last_inspect_toggle: 0,
             tip_sent: TipBuf::new(),
@@ -574,6 +655,10 @@ impl App {
             energy_saver: false,
             display_notify: None,
             saver_notify: None,
+            last_cpu_alert_tick: 0,
+            last_ram_alert_tick: 0,
+            last_disk_alert_tick: 0,
+            cpu_high_since: 0,
             balloon: None,
             portable_readonly: detected.portable_readonly,
         }
@@ -614,6 +699,7 @@ impl App {
             .as_ref()
             .or(self.tray_static.as_ref())
             .or(self.tray_ram.as_ref())
+            .or(self.tray_gpu.as_ref())
             .or(self.tray_net.as_ref())
             .or(self.tray_temp_acpi.as_ref())
             .or(self.tray_temp_gpu.as_ref())
@@ -624,6 +710,11 @@ impl App {
         }
     }
 
+    fn show_balloon_str(&mut self, text: &str, kind: Balloon) {
+        let text_w: Vec<u16> = text.encode_utf16().chain(core::iter::once(0)).collect();
+        self.show_balloon(&text_w, kind);
+    }
+
     fn explorer_tip(&self) -> &[u16] {
         if self.hover_win.is_some() { &[] } else { self.tip_sent.as_wide() }
     }
@@ -632,12 +723,14 @@ impl App {
         if !self.settings.has_any_icon() {
             self.tray_cpu = None;
             self.tray_ram = None;
+            self.tray_gpu = None;
             self.tray_net = None;
             self.tray_temp_acpi = None;
             self.tray_temp_gpu = None;
             self.tray_temp_disk = None;
             self.drawn_cpu = None;
             self.drawn_ram = None;
+            self.drawn_gpu = None;
             self.drawn_net = None;
             self.drawn_temp_acpi = None;
             self.drawn_temp_gpu = None;
@@ -682,6 +775,31 @@ impl App {
         } else {
             self.tray_ram = None;
             self.drawn_ram = None;
+        }
+
+        if self.settings.is_icon_active(ICON_GPU) {
+            if self.tray_gpu.is_none() {
+                let gpu_pct = self.gpu_stats.as_ref().and_then(|s| s.gpu_pct);
+                let level = if let Some(pct) = gpu_pct {
+                    if pct >= 90 {
+                        Level::Full
+                    } else if pct >= 75 {
+                        Level::Warn
+                    } else {
+                        Level::Normal
+                    }
+                } else {
+                    Level::Normal
+                };
+                let icon = self.draw_gpu_icon(gpu_pct, level);
+                if let Some(icon) = icon {
+                    let tip = self.explorer_tip();
+                    self.tray_gpu = TrayIcon::add(self.hwnd, ID_GPU, &icon, tip);
+                }
+            }
+        } else {
+            self.tray_gpu = None;
+            self.drawn_gpu = None;
         }
 
         if self.settings.is_icon_active(ICON_NET) {
@@ -1008,6 +1126,81 @@ impl App {
             self.last_disk_tick = 0;
         }
 
+        // Cronologia per sparklines
+        if let Some(cpu_pct) = self.percent_cpu {
+            self.cpu_history.push(cpu_pct);
+            if self.cpu_history.len() > 30 {
+                self.cpu_history.remove(0);
+            }
+        }
+        if let Some(ram_pct) = self.percent_ram {
+            self.ram_history.push(ram_pct);
+            if self.ram_history.len() > 30 {
+                self.ram_history.remove(0);
+            }
+        }
+        if let Some(rates) = self.net_rates {
+            let total_bps = (rates.down.saturating_add(rates.up)) as u32;
+            self.net_history.push(total_bps);
+            if self.net_history.len() > 30 {
+                self.net_history.remove(0);
+            }
+        }
+
+        // Campionamento GPU 3D & VRAM (per icona o hover)
+        if self.settings.is_metric_active(METRIC_GPU) || self.settings.hover_gpu {
+            if self.gpu_metrics_sampler.is_none() {
+                self.gpu_metrics_sampler = nextm_metrics::sys::gpu::GpuMetricsSampler::new();
+            }
+            if let Some(sampler) = self.gpu_metrics_sampler.as_mut()
+                && (self.last_gpu_metrics_tick == 0 || now >= self.last_gpu_metrics_tick + 1000 || hovering)
+            {
+                let selected = if self.settings.gpu_luid != 0 { Some(self.settings.gpu_luid) } else { None };
+                self.gpu_stats = sampler.sample(selected);
+                self.last_gpu_metrics_tick = now;
+            }
+        } else {
+            self.gpu_metrics_sampler = None;
+            self.gpu_stats = None;
+            self.last_gpu_metrics_tick = 0;
+        }
+
+        // Rilevamento CPU Power & Thermal Throttling (ogni 3s)
+        if self.last_throttle_check == 0 || now >= self.last_throttle_check + 3000 {
+            if let Some(status) = power::check_cpu_throttling() {
+                self.cpu_throttled = status.is_throttled;
+                self.cpu_mhz = Some(status.current_mhz);
+            }
+            self.last_throttle_check = now;
+        }
+
+        // Registratore di sessione Blackbox (CSV)
+        if self.settings.blackbox_recording {
+            if self.blackbox.is_none() {
+                self.blackbox = Some(crate::sys::blackbox::BlackboxRecorder::new());
+            }
+            if let Some(bb) = self.blackbox.as_mut() {
+                let top_cpu_name = self.cached_top_procs.0.first().map(|(n, _)| n.as_str());
+                let top_ram_name = self.cached_top_procs.1.first().map(|(n, _)| n.as_str());
+                let (down_bps, up_bps) = self.net_rates.map(|r| (r.down, r.up)).unwrap_or((0, 0));
+                bb.record_sample(
+                    now,
+                    self.percent_cpu.unwrap_or(0),
+                    self.percent_ram.unwrap_or(0),
+                    down_bps,
+                    up_bps,
+                    self.gpu_stats.as_ref().and_then(|g| g.gpu_pct),
+                    self.temp_acpi_c,
+                    self.temp_gpu_c,
+                    self.temp_disk_c,
+                    top_cpu_name,
+                    top_ram_name,
+                );
+            }
+        } else {
+            self.blackbox = None;
+        }
+
         // 7. Aggiorna Tooltip
         let is_it = core::ptr::eq(self.s, &strings::IT);
         let units = if self.settings.net_bits { Units::Bits } else { Units::Bytes };
@@ -1049,16 +1242,83 @@ impl App {
         };
         build_tooltip(&mut self.tip_sent, self.s, is_it, &tooltip_data);
 
-        // 8. Aggiorna la finestra di hover se visibile
-        if self.hover_win.as_ref().is_some_and(|h| h.is_visible()) {
+        // 8. Aggiorna la finestra di hover se visibile e mantieni pronti i campionatori
+        let hover_visible = self.hover_win.as_ref().is_some_and(|h| h.is_visible());
+        if hover_visible || hovering || self.first_tick {
             let snapshot = self.make_hover_snapshot();
-            if let Some(hover) = &mut self.hover_win {
+            if hover_visible && let Some(hover) = &mut self.hover_win {
                 hover.refresh_if_visible(snapshot);
             }
         }
 
         // 9. Aggiorna le icone
         self.update_tray_content();
+
+        // 10. Valutazione Avvisi Proattivi (Alerts)
+        if !self.first_tick {
+            if self.settings.alert_cpu {
+                let cpu_pct = self.percent_cpu.unwrap_or(0);
+                if cpu_pct >= self.settings.alert_cpu_threshold {
+                    if self.cpu_high_since == 0 {
+                        self.cpu_high_since = now;
+                    } else if now.saturating_sub(self.cpu_high_since) >= 15_000
+                        && now.saturating_sub(self.last_cpu_alert_tick) >= 300_000
+                    {
+                        self.last_cpu_alert_tick = now;
+                        let msg = if is_it {
+                            format!("Carico CPU elevato: {}% (soglia {}%)", cpu_pct, self.settings.alert_cpu_threshold)
+                        } else {
+                            format!("High CPU load: {}% (threshold {}%)", cpu_pct, self.settings.alert_cpu_threshold)
+                        };
+                        self.show_balloon_str(&msg, Balloon::Alert);
+                    }
+                } else {
+                    self.cpu_high_since = 0;
+                }
+            } else {
+                self.cpu_high_since = 0;
+            }
+
+            if self.settings.alert_ram {
+                let ram_pct = self.percent_ram.unwrap_or(0);
+                if ram_pct >= self.settings.alert_ram_threshold
+                    && now.saturating_sub(self.last_ram_alert_tick) >= 300_000
+                {
+                    self.last_ram_alert_tick = now;
+                    let msg = if is_it {
+                        format!("Memoria RAM elevata: {}% (soglia {}%)", ram_pct, self.settings.alert_ram_threshold)
+                    } else {
+                        format!("High RAM usage: {}% (threshold {}%)", ram_pct, self.settings.alert_ram_threshold)
+                    };
+                    self.show_balloon_str(&msg, Balloon::Alert);
+                }
+            }
+
+            if self.settings.alert_disk && now.saturating_sub(self.last_disk_alert_tick) >= 300_000 {
+                let disks = nextm_metrics::sys::disk::scan_mounted_disks();
+                if let Some(critical_disk) =
+                    disks.iter().find(|d| d.used_percent() >= self.settings.alert_disk_threshold)
+                {
+                    self.last_disk_alert_tick = now;
+                    let msg = if is_it {
+                        format!(
+                            "Spazio su disco {}: {}% occupato (soglia {}%)",
+                            critical_disk.letter,
+                            critical_disk.used_percent(),
+                            self.settings.alert_disk_threshold
+                        )
+                    } else {
+                        format!(
+                            "Low disk space on {}: {}% used (threshold {}%)",
+                            critical_disk.letter,
+                            critical_disk.used_percent(),
+                            self.settings.alert_disk_threshold
+                        )
+                    };
+                    self.show_balloon_str(&msg, Balloon::Alert);
+                }
+            }
+        }
     }
 
     fn color_for_level(palette: &Palette, level: Level) -> Color {
@@ -1098,6 +1358,18 @@ impl App {
         let color = Self::color_for_level(&self.palette, level);
         if self.settings.is_icon_symbol_active(ICON_SYMBOL_RAM) {
             draw_ram_icon(&mut self.canvas, text, color);
+        } else {
+            draw_value_icon(&mut self.canvas, text, color);
+        }
+        Icon::from_canvas(&self.canvas)
+    }
+
+    fn draw_gpu_icon(&mut self, percent: Option<u8>, level: Level) -> Option<Icon> {
+        let mut buf = [0u8; 3];
+        let text = icon_text(percent, &mut buf);
+        let color = Self::color_for_level(&self.palette, level);
+        if self.settings.is_icon_symbol_active(ICON_SYMBOL_GPU) {
+            draw_gpu_icon(&mut self.canvas, text, color);
         } else {
             draw_value_icon(&mut self.canvas, text, color);
         }
@@ -1208,6 +1480,40 @@ impl App {
             }
         }
 
+        // GPU Carico %
+        if self.tray_gpu.is_some() {
+            let gpu_pct = self.gpu_stats.as_ref().and_then(|s| s.gpu_pct);
+            let level = if let Some(pct) = gpu_pct {
+                if pct >= 90 {
+                    Level::Full
+                } else if pct >= 75 {
+                    Level::Warn
+                } else {
+                    Level::Normal
+                }
+            } else {
+                Level::Normal
+            };
+            let key = DrawKeyGpu {
+                percent: gpu_pct,
+                level,
+                size,
+                palette: self.palette,
+                symbol: self.settings.is_icon_symbol_active(ICON_SYMBOL_GPU),
+            };
+            if self.drawn_gpu != Some(key) {
+                let icon = self.draw_gpu_icon(gpu_pct, level);
+                if let Some(icon) = icon {
+                    if let Some(tray) = &self.tray_gpu {
+                        tray.update_or_readd(&icon, self.explorer_tip());
+                    }
+                    self.drawn_gpu = Some(key);
+                }
+            } else if let Some(tray) = &self.tray_gpu {
+                tray.set_tip(self.explorer_tip());
+            }
+        }
+
         // Rete
         if self.tray_net.is_some() {
             let units = if self.settings.net_bits { Units::Bits } else { Units::Bytes };
@@ -1309,9 +1615,14 @@ impl App {
             self.retime();
         }
 
-        let snapshot = self.make_hover_snapshot();
-        if let Some(hover) = &mut self.hover_win {
-            hover.show_or_update(snapshot, x, y);
+        let is_visible = self.hover_win.as_ref().is_some_and(|h| h.is_visible());
+        let anchor_moved = self.hover_win.as_ref().is_some_and(|h| h.anchor_distance(POINT { x, y }) > 35);
+
+        if !is_visible || anchor_moved {
+            let snapshot = self.make_hover_snapshot();
+            if let Some(hover) = &mut self.hover_win {
+                hover.show_or_update(snapshot, x, y);
+            }
         }
 
         unsafe {
@@ -1353,7 +1664,7 @@ impl App {
         }
     }
 
-    fn make_hover_snapshot(&self) -> HoverSnapshot {
+    fn make_hover_snapshot(&mut self) -> HoverSnapshot {
         let is_it = core::ptr::eq(self.s, &strings::IT);
         let units = if self.settings.net_bits { Units::Bits } else { Units::Bytes };
         let (down_fmt, up_fmt) = if let Some(rates) = self.net_rates {
@@ -1368,8 +1679,81 @@ impl App {
         let selected_gpu =
             self.gpu_adapters.iter().find(|a| a.luid == self.settings.gpu_luid).or_else(|| self.gpu_adapters.first());
 
-        let mounted_disks =
-            if self.settings.disk_space_hover { nextm_metrics::sys::disk::scan_mounted_disks() } else { Vec::new() };
+        let mounted_disks = if self.settings.disk_space_hover {
+            if let Some(sampler) = self.disk_speed_sampler.as_mut() {
+                sampler.sample()
+            } else {
+                nextm_metrics::sys::disk::scan_mounted_disks()
+            }
+        } else {
+            Vec::new()
+        };
+
+        let now_ms = unsafe { windows_sys::Win32::System::SystemInformation::GetTickCount64() };
+        let (top_cpu, top_ram, top_net) =
+            if self.settings.hover_top_cpu || self.settings.hover_top_ram || self.settings.hover_top_net {
+                if now_ms >= self.last_top_proc_sample_ms + 1000
+                    || (self.cached_top_procs.0.is_empty()
+                        && self.cached_top_procs.1.is_empty()
+                        && self.cached_top_procs.2.is_empty())
+                {
+                    if self.top_proc_tracker.is_none() {
+                        self.top_proc_tracker = Some(nextm_metrics::sys::process_top::TopProcessTracker::new());
+                    }
+                    if let Some(tracker) = self.top_proc_tracker.as_mut() {
+                        let res = tracker.sample(
+                            self.settings.hover_top_n_cpu as usize,
+                            self.settings.hover_top_n_ram as usize,
+                            self.settings.hover_top_n_net as usize,
+                            self.settings.hover_top_cpu,
+                            self.settings.hover_top_ram,
+                            self.settings.hover_top_net,
+                            is_it,
+                        );
+                        self.cached_top_procs = (res.cpu, res.ram, res.net);
+                        self.last_top_proc_sample_ms = now_ms;
+                    }
+                }
+                self.cached_top_procs.clone()
+            } else {
+                (Vec::new(), Vec::new(), Vec::new())
+            };
+
+        let (cpu_sparkline, ram_sparkline, net_sparkline, net_spark_min, net_spark_avg, net_spark_max) = if self
+            .settings
+            .hover_sparklines
+        {
+            let max_net = self.net_history.iter().copied().max().unwrap_or(0).max(100 * 1024);
+            let net_norm: Vec<u8> =
+                self.net_history.iter().map(|&bytes| ((bytes as u64 * 100) / max_net as u64).min(100) as u8).collect();
+            let (s_min, s_avg, s_max) = if !self.net_history.is_empty() {
+                let min_b = self.net_history.iter().copied().min().unwrap_or(0);
+                let max_b = self.net_history.iter().copied().max().unwrap_or(0);
+                let avg_b =
+                    (self.net_history.iter().map(|&b| b as u64).sum::<u64>() / self.net_history.len() as u64) as u32;
+                (
+                    Some(format_rate(u64::from(min_b), units, is_it).as_str().to_string()),
+                    Some(format_rate(u64::from(avg_b), units, is_it).as_str().to_string()),
+                    Some(format_rate(u64::from(max_b), units, is_it).as_str().to_string()),
+                )
+            } else {
+                (None, None, None)
+            };
+            (self.cpu_history.clone(), self.ram_history.clone(), net_norm, s_min, s_avg, s_max)
+        } else {
+            (Vec::new(), Vec::new(), Vec::new(), None, None, None)
+        };
+
+        let (gpu_name, gpu_3d_pct, vram_used_mb, vram_total_mb) = if let Some(stats) = &self.gpu_stats {
+            (
+                Some(stats.name.clone()),
+                stats.gpu_pct,
+                Some(stats.vram_used_bytes / (1024 * 1024)),
+                Some(stats.vram_total_bytes / (1024 * 1024)),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         HoverSnapshot {
             is_dark: self.theme != Theme::Light,
@@ -1381,6 +1765,8 @@ impl App {
             sat_state: self.sat_report.state,
             sat_top_proc: self.sat_top_proc.clone(),
             cpu_cores: self.cpu_per_core.clone(),
+            cpu_throttled: self.cpu_throttled,
+            cpu_mhz: self.cpu_mhz,
             ram_active: self.settings.is_metric_active(METRIC_RAM),
             ram_percent: self.percent_ram,
             ram_used_x10: self.ram_used_x10,
@@ -1400,6 +1786,20 @@ impl App {
             temp_disk_label: self.temp_disk_label.clone(),
             disk_space_active: self.settings.disk_space_hover,
             mounted_disks,
+            top_cpu_procs: top_cpu,
+            top_ram_procs: top_ram,
+            top_net_procs: top_net,
+            cpu_sparkline,
+            ram_sparkline,
+            net_sparkline,
+            net_spark_min,
+            net_spark_avg,
+            net_spark_max,
+            gpu_active: self.settings.hover_gpu,
+            gpu_name,
+            gpu_3d_pct,
+            vram_used_mb,
+            vram_total_mb,
         }
     }
 
@@ -1408,6 +1808,8 @@ impl App {
             self.settings.first_run_done = true;
             self.save();
             shell::open_with_explorer(wide!("ms-settings:taskbar"));
+        } else if self.balloon == Some(Balloon::Alert) {
+            self.show_inspect();
         }
         self.balloon = None;
     }
@@ -1415,6 +1817,7 @@ impl App {
     fn on_activate(&mut self) {
         self.tray_cpu = None;
         self.tray_ram = None;
+        self.tray_gpu = None;
         self.tray_net = None;
         self.tray_temp_acpi = None;
         self.tray_temp_gpu = None;
@@ -1422,6 +1825,7 @@ impl App {
         self.tray_static = None;
         self.drawn_cpu = None;
         self.drawn_ram = None;
+        self.drawn_gpu = None;
         self.drawn_net = None;
         self.drawn_temp_acpi = None;
         self.drawn_temp_gpu = None;
@@ -1438,6 +1842,7 @@ impl App {
         self.canvas.resize(size, size);
         self.tray_cpu = None;
         self.tray_ram = None;
+        self.tray_gpu = None;
         self.tray_net = None;
         self.tray_temp_acpi = None;
         self.tray_temp_gpu = None;
@@ -1445,6 +1850,7 @@ impl App {
         self.tray_static = None;
         self.drawn_cpu = None;
         self.drawn_ram = None;
+        self.drawn_gpu = None;
         self.drawn_net = None;
         self.drawn_temp_acpi = None;
         self.drawn_temp_gpu = None;
@@ -1472,6 +1878,7 @@ impl App {
             self.palette = Palette::for_theme(t);
             self.drawn_cpu = None;
             self.drawn_ram = None;
+            self.drawn_gpu = None;
             self.drawn_net = None;
             self.drawn_temp_acpi = None;
             self.drawn_temp_gpu = None;
@@ -1532,6 +1939,15 @@ impl App {
         self.last_disk_tick = 0;
         self.cpu.reset_per_core();
         self.cpu_per_core = None;
+        self.cpu_history.clear();
+        self.ram_history.clear();
+        self.net_history.clear();
+        self.last_gpu_metrics_tick = 0;
+        self.cached_top_procs = (Vec::new(), Vec::new(), Vec::new());
+        self.last_top_proc_sample_ms = 0;
+        if let Some(t) = self.top_proc_tracker.as_mut() {
+            t.reset();
+        }
     }
 
     fn update_power_registrations(&mut self) {
@@ -1618,6 +2034,109 @@ impl App {
             }
             CMD_DISK_SPACE_HOVER => {
                 self.settings.disk_space_hover = !self.settings.disk_space_hover;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_CPU => {
+                self.settings.hover_top_cpu = !self.settings.hover_top_cpu;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_RAM => {
+                self.settings.hover_top_ram = !self.settings.hover_top_ram;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_NET => {
+                self.settings.hover_top_net = !self.settings.hover_top_net;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_SPARKLINES => {
+                self.settings.hover_sparklines = !self.settings.hover_sparklines;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_GPU => {
+                self.settings.hover_gpu = !self.settings.hover_gpu;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_N_3 => {
+                self.settings.hover_top_n_cpu = 3;
+                self.settings.hover_top_n_ram = 3;
+                self.settings.hover_top_n_net = 3;
+                self.settings.hover_top_n = 3;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_N_5 => {
+                self.settings.hover_top_n_cpu = 5;
+                self.settings.hover_top_n_ram = 5;
+                self.settings.hover_top_n_net = 5;
+                self.settings.hover_top_n = 5;
+                self.on_settings_modified();
+            }
+            CMD_HOVER_TOP_N_10 => {
+                self.settings.hover_top_n_cpu = 10;
+                self.settings.hover_top_n_ram = 10;
+                self.settings.hover_top_n_net = 10;
+                self.settings.hover_top_n = 10;
+                self.on_settings_modified();
+            }
+            CMD_TOP_CPU_INC => {
+                self.settings.hover_top_n_cpu = (self.settings.hover_top_n_cpu + 1).min(25);
+                self.settings.hover_top_n = self.settings.hover_top_n_cpu;
+                self.on_settings_modified();
+            }
+            CMD_TOP_CPU_DEC => {
+                self.settings.hover_top_n_cpu = self.settings.hover_top_n_cpu.saturating_sub(1).max(1);
+                self.settings.hover_top_n = self.settings.hover_top_n_cpu;
+                self.on_settings_modified();
+            }
+            CMD_TOP_RAM_INC => {
+                self.settings.hover_top_n_ram = (self.settings.hover_top_n_ram + 1).min(25);
+                self.on_settings_modified();
+            }
+            CMD_TOP_RAM_DEC => {
+                self.settings.hover_top_n_ram = self.settings.hover_top_n_ram.saturating_sub(1).max(1);
+                self.on_settings_modified();
+            }
+            CMD_TOP_NET_INC => {
+                self.settings.hover_top_n_net = (self.settings.hover_top_n_net + 1).min(25);
+                self.on_settings_modified();
+            }
+            CMD_TOP_NET_DEC => {
+                self.settings.hover_top_n_net = self.settings.hover_top_n_net.saturating_sub(1).max(1);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_CPU_TOGGLE => {
+                self.settings.alert_cpu = !self.settings.alert_cpu;
+                self.on_settings_modified();
+            }
+            CMD_ALERT_CPU_INC => {
+                self.settings.alert_cpu_threshold = (self.settings.alert_cpu_threshold + 5).min(100);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_CPU_DEC => {
+                self.settings.alert_cpu_threshold = self.settings.alert_cpu_threshold.saturating_sub(5).max(10);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_RAM_TOGGLE => {
+                self.settings.alert_ram = !self.settings.alert_ram;
+                self.on_settings_modified();
+            }
+            CMD_ALERT_RAM_INC => {
+                self.settings.alert_ram_threshold = (self.settings.alert_ram_threshold + 5).min(100);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_RAM_DEC => {
+                self.settings.alert_ram_threshold = self.settings.alert_ram_threshold.saturating_sub(5).max(10);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_DISK_TOGGLE => {
+                self.settings.alert_disk = !self.settings.alert_disk;
+                self.on_settings_modified();
+            }
+            CMD_ALERT_DISK_INC => {
+                self.settings.alert_disk_threshold = (self.settings.alert_disk_threshold + 5).min(100);
+                self.on_settings_modified();
+            }
+            CMD_ALERT_DISK_DEC => {
+                self.settings.alert_disk_threshold = self.settings.alert_disk_threshold.saturating_sub(5).max(10);
                 self.on_settings_modified();
             }
             CMD_SAT_ALWAYS => {
@@ -1755,6 +2274,42 @@ impl App {
             CMD_TEMP_DISK_ICON_SYMBOL => {
                 self.settings.icon_symbols ^= ICON_SYMBOL_TEMP_DISK;
                 self.on_settings_modified();
+            }
+            CMD_GPU_ACTIVE => {
+                self.settings.metrics ^= METRIC_GPU;
+                if !self.settings.is_metric_active(METRIC_GPU) {
+                    self.settings.icons &= !ICON_GPU;
+                    self.gpu_metrics_sampler = None;
+                    self.gpu_stats = None;
+                }
+                self.on_settings_modified();
+            }
+            CMD_GPU_ICON => {
+                self.settings.icons ^= ICON_GPU;
+                if self.settings.is_icon_active(ICON_GPU) {
+                    self.settings.metrics |= METRIC_GPU;
+                }
+                self.on_settings_modified();
+            }
+            CMD_GPU_ICON_SYMBOL => {
+                self.settings.icon_symbols ^= ICON_SYMBOL_GPU;
+                self.on_settings_modified();
+            }
+            CMD_BLACKBOX_TOGGLE => {
+                self.settings.blackbox_recording = !self.settings.blackbox_recording;
+                if !self.settings.blackbox_recording {
+                    self.blackbox = None;
+                }
+                self.on_settings_modified();
+            }
+            CMD_BLACKBOX_OPEN_DIR => {
+                let dir = crate::sys::blackbox::BlackboxRecorder::log_dir();
+                let _ = std::fs::create_dir_all(&dir);
+                if let Some(s) = dir.to_str() {
+                    let mut wide: Vec<u16> = s.encode_utf16().collect();
+                    wide.push(0);
+                    crate::sys::shell::open_with_explorer(&wide);
+                }
             }
             CMD_INTERVAL_1S | CMD_INTERVAL_2S | CMD_INTERVAL_5S => {
                 self.settings.interval_ms = match cmd {

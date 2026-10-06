@@ -1,22 +1,18 @@
-# Contribuire a nextm
+# Contributing to nextm
 
-Grazie dell'interesse. nextm ha due principi che valgono per ogni modifica: **super semplice e minimale** per chi lo
-usa, **efficienza misurata** per chi lo scrive. Una funzione in più deve rispondere a un bisogno reale; un costo in
-più (memoria, CPU, risvegli, DLL caricate) deve essere misurato e giustificato.
+Thank you for your interest in nextm. The project adheres to two core principles for every change: **super simple and minimal** for the user, and **measured efficiency** for the developer. Every additional feature must address a genuine need; any additional cost (memory footprint, CPU cycles, timer wakeups, loaded DLLs) must be measured and justified.
 
-## Segnalare un problema
+## Reporting an Issue
 
-Apri una issue e allega l'output di `nextm --diagnose` (versione di Windows, CPU, DPI, tema, modalità delle
-impostazioni). Descrivi cosa ti aspettavi e cosa è successo.
+Open an issue and attach the output of `nextm --diagnose` (Windows version, CPU, DPI, theme, settings mode). Clearly describe what you expected to happen and what actually occurred.
 
-## Preparare l'ambiente
+## Setting Up Your Environment
 
 - Windows 11.
-- Rust: la versione è fissata in `rust-toolchain.toml`, rustup la installa da sola.
-- Visual Studio Build Tools con "Sviluppo di applicazioni desktop con C++" e il Windows SDK (serve anche `rc.exe`
-  per le risorse dell'eseguibile).
+- Rust: the version is pinned in `rust-toolchain.toml`, and `rustup` installs it automatically.
+- Visual Studio Build Tools with "Desktop development with C++" and the Windows SDK (including `rc.exe` for executable resources).
 
-## Comandi
+## Verification Commands
 
 ```powershell
 cargo build --release -p nextm
@@ -28,42 +24,35 @@ cargo xtask check-size target/release/nextm.exe --budget size-budget-x86_64-pc-w
 cargo xtask bench target/release/nextm.exe --seconds 60 --warmup 45
 ```
 
-La CI esegue gli stessi controlli per x64 e ARM64.
+Continuous Integration (CI) executes these exact checks for both x64 and ARM64.
 
-## Regole del codice
+## Code Guidelines
 
-- Tutto l'`unsafe` sta nei moduli `sys`, con involucri che liberano da soli le risorse (RAII) e un commento
-  `// SAFETY:` per ogni blocco.
-- Niente `unwrap`, `expect` o `panic!` nel codice dell'applicazione (nei test sono ammessi).
-- Niente allocazioni né `format!` nel lavoro che si ripete a ogni tick.
-- Commenti in italiano, identificatori in inglese.
-- **Non aggiungere la feature `Win32_System_Registry` di windows-sys**: dichiarerebbe le funzioni del registro su
-  advapi32 e il linker userebbe quelle al posto dell'API set (vedi `crates/nextm/src/sys/registry.rs`).
-- Una DLL opzionale si carica con `LoadLibraryExW(..., LOAD_LIBRARY_SEARCH_SYSTEM32)` solo quando la funzione che
-  la usa viene attivata; `cargo xtask check-imports` fallisce se compare un import non ammesso.
+- All `unsafe` code must reside in `sys` modules, wrapped in RAII structures that automatically release resources, accompanied by a `// SAFETY:` explanation comment for every block.
+- No `unwrap()`, `expect()`, or `panic!` calls in application runtime code (they are permitted in unit/integration tests).
+- Zero heap allocations and no `format!` calls inside recurring sampling tick loops.
+- Comments and docstrings should be clear and concise; identifiers must strictly be in English.
+- **Do not add the `Win32_System_Registry` feature from windows-sys**: it declares registry APIs on advapi32, which causes the linker to bind statically to advapi32 instead of the lightweight API set (see `crates/nextm/src/sys/registry.rs`).
+- Any optional DLL must be dynamically loaded with `LoadLibraryExW(..., LOAD_LIBRARY_SEARCH_SYSTEM32)` only when the feature that requires it is activated; `cargo xtask check-imports` will strictly fail if an unapproved static import appears.
 
-## Immagini di riferimento
+## Reference Images (Golden Tests)
 
-I test in `crates/nextm-render/tests/golden.rs` confrontano le icone disegnate con i file in `tests/golden/`. Se una
-modifica al disegno è voluta, rigenerali e controlla il diff prima del commit:
+Tests in `crates/nextm-render/tests/golden.rs` compare rendered icons against bitmap references in `tests/golden/`. If an icon rendering adjustment is intentional, regenerate and review the diff before committing:
 
 ```powershell
 $env:NEXTM_BLESS = "1"; cargo test -p nextm-render --test golden; Remove-Item Env:NEXTM_BLESS
 ```
 
-## Dimensione dell'eseguibile
+## Binary Size Budget
 
-`size-budget-<target>.txt` contiene la dimensione di riferimento: la CI fallisce se l'eseguibile la supera di oltre
-il 5%. Quando la dimensione scende, aggiorna il riferimento con `--update`. Il valore per ARM64 è provvisorio e va
-fissato dopo la prima build in CI.
+`size-budget-<target>.txt` defines the reference binary size: CI fails if the compiled executable exceeds the reference by more than 5%. When binary size decreases, update the reference using `--update`.
 
-## Branch
+## Branching Strategy
 
-- `main`: solo milestone finite e verificate (test, clippy, `bench` e revisione).
-- `develop`: integrazione. Sempre compilabile e con i test verdi; le pull request vanno qui.
-- `feat/…`, `fix/…`: lavoro in corso. Partono da `develop` e ci tornano.
+- `main`: production releases and milestone tags only (fully verified via tests, clippy, benchmarks, and review).
+- `develop`: primary integration branch. Must always compile cleanly with all tests passing; pull requests should target `develop`.
+- `feat/…`, `fix/…`: feature and bugfix branches. Branched from and merged back into `develop`.
 
-## Commit
+## Commit Conventions
 
-Messaggi brevi e al presente, in italiano, con un prefisso (`feat:`, `fix:`, `perf:`, `docs:`, `test:`, `build:`,
-`ci:`). Ogni modifica visibile va annotata in `CHANGELOG.md` sotto *Non rilasciato*.
+Keep commit messages concise and in the present tense, prefixed with standard conventional commit types (`feat:`, `fix:`, `perf:`, `docs:`, `test:`, `build:`, `ci:`). Every user-facing change must be documented in `CHANGELOG.md` under *Unreleased*.

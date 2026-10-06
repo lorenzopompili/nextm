@@ -82,3 +82,106 @@ pub unsafe fn setting_from_lparam(lparam: LPARAM) -> Option<(GUID, u32)> {
         Some((s.PowerSetting, data))
     }
 }
+
+/// Dettaglio dello stato energetico e thermal/power throttling del processore.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CpuThrottleStatus {
+    pub is_throttled: bool,
+    pub current_mhz: u32,
+    pub max_mhz: u32,
+    pub mhz_limit: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Default, Debug)]
+struct ProcessorPowerInformation {
+    number: u32,
+    max_mhz: u32,
+    current_mhz: u32,
+    mhz_limit: u32,
+    max_idle_state: u32,
+    current_idle_state: u32,
+}
+
+type FnCallNtPowerInformation =
+    unsafe extern "system" fn(u32, *const core::ffi::c_void, u32, *mut core::ffi::c_void, u32) -> i32;
+
+static FN_CALL_NT_POWER_INFO: std::sync::OnceLock<Option<FnCallNtPowerInformation>> = std::sync::OnceLock::new();
+
+fn get_call_nt_power_info() -> Option<FnCallNtPowerInformation> {
+    *FN_CALL_NT_POWER_INFO.get_or_init(|| {
+        use windows_sys::Win32::System::LibraryLoader::{GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW};
+        let h_powrprof = unsafe {
+            LoadLibraryExW(wide!("powrprof.dll").as_ptr(), core::ptr::null_mut(), LOAD_LIBRARY_SEARCH_SYSTEM32)
+        };
+        if h_powrprof.is_null() {
+            return None;
+        }
+        let proc = unsafe { GetProcAddress(h_powrprof, c"CallNtPowerInformation".as_ptr().cast()) }?;
+        let call_pwr: FnCallNtPowerInformation = unsafe { core::mem::transmute(proc) };
+        Some(call_pwr)
+    })
+}
+
+/// Rileva lo stato di thermal o power throttling della CPU interrogando `CallNtPowerInformation`.
+pub fn check_cpu_throttling() -> Option<CpuThrottleStatus> {
+    use windows_sys::Win32::System::Threading::{ALL_PROCESSOR_GROUPS, GetActiveProcessorCount};
+
+    let call_pwr = get_call_nt_power_info()?;
+    let count = unsafe { GetActiveProcessorCount(ALL_PROCESSOR_GROUPS) }.max(1) as usize;
+
+    let mut stack_buf = [ProcessorPowerInformation::default(); 64];
+    let mut heap_buf: Vec<ProcessorPowerInformation>;
+    let target_slice: &mut [ProcessorPowerInformation] = if count <= stack_buf.len() {
+        &mut stack_buf[..count]
+    } else {
+        heap_buf = vec![ProcessorPowerInformation::default(); count];
+        &mut heap_buf[..]
+    };
+
+    let buf_size = (count * size_of::<ProcessorPowerInformation>()) as u32;
+    let status = unsafe { call_pwr(11, core::ptr::null(), 0, target_slice.as_mut_ptr().cast(), buf_size) };
+    if status != 0 {
+        return None;
+    }
+
+    let mut sum_cur = 0u64;
+    let mut sum_max = 0u64;
+    let mut sum_limit = 0u64;
+    let mut any_throttled = false;
+
+    for info in target_slice.iter() {
+        sum_cur += u64::from(info.current_mhz);
+        sum_max += u64::from(info.max_mhz);
+        sum_limit += u64::from(info.mhz_limit);
+        if (info.max_mhz > 0 && info.mhz_limit < info.max_mhz)
+            || (info.max_mhz > 0 && info.current_mhz < (info.max_mhz * 85 / 100))
+        {
+            any_throttled = true;
+        }
+    }
+
+    let avg_cur = (sum_cur / count as u64) as u32;
+    let avg_max = (sum_max / count as u64) as u32;
+    let avg_limit = (sum_limit / count as u64) as u32;
+
+    Some(CpuThrottleStatus {
+        is_throttled: any_throttled,
+        current_mhz: avg_cur,
+        max_mhz: avg_max,
+        mhz_limit: avg_limit,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cpu_throttling_check() {
+        if let Some(st) = check_cpu_throttling() {
+            eprintln!("CPU Power/Throttle: {:?}", st);
+            assert!(st.max_mhz > 0, "max_mhz deve essere maggiore di 0");
+        }
+    }
+}

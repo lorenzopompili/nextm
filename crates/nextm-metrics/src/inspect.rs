@@ -108,6 +108,77 @@ impl fmt::Display for IpAddrKind {
     }
 }
 
+/// Ambito e classificazione geografica/di rete di un indirizzo IP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpScope {
+    Loopback,
+    PrivateLan,
+    CarrierGradeNat,
+    LinkLocal,
+    Multicast,
+    PublicWan,
+    Unspecified,
+}
+
+impl IpScope {
+    pub fn badge(&self) -> &'static str {
+        match self {
+            Self::Loopback => "Loopback",
+            Self::PrivateLan => "LAN",
+            Self::CarrierGradeNat => "CGNAT",
+            Self::LinkLocal => "Link-Local",
+            Self::Multicast => "Multicast",
+            Self::PublicWan => "WAN",
+            Self::Unspecified => "—",
+        }
+    }
+
+    pub fn is_public(&self) -> bool {
+        matches!(self, Self::PublicWan)
+    }
+}
+
+impl IpAddrKind {
+    pub fn scope(&self) -> IpScope {
+        match self {
+            Self::V4(b) => {
+                if b[0] == 0 && b[1] == 0 && b[2] == 0 && b[3] == 0 {
+                    IpScope::Unspecified
+                } else if b[0] == 127 {
+                    IpScope::Loopback
+                } else if b[0] == 10 || (b[0] == 172 && (16..=31).contains(&b[1])) || (b[0] == 192 && b[1] == 168) {
+                    IpScope::PrivateLan
+                } else if b[0] == 169 && b[1] == 254 {
+                    IpScope::LinkLocal
+                } else if b[0] == 100 && (64..=127).contains(&b[1]) {
+                    IpScope::CarrierGradeNat
+                } else if (224..=239).contains(&b[0]) {
+                    IpScope::Multicast
+                } else if b[0] >= 240 {
+                    IpScope::Unspecified
+                } else {
+                    IpScope::PublicWan
+                }
+            }
+            Self::V6(b) => {
+                if *self == Self::V6([0; 16]) {
+                    IpScope::Unspecified
+                } else if *self == Self::V6([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]) {
+                    IpScope::Loopback
+                } else if b[0] == 0xfe && (b[1] & 0xc0) == 0x80 {
+                    IpScope::LinkLocal
+                } else if (b[0] & 0xfe) == 0xfc {
+                    IpScope::PrivateLan
+                } else if b[0] == 0xff {
+                    IpScope::Multicast
+                } else {
+                    IpScope::PublicWan
+                }
+            }
+        }
+    }
+}
+
 /// Informazioni su una porta o connessione socket.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SocketInfo {
@@ -214,5 +285,17 @@ mod tests {
         assert_eq!(ServiceState::Running.as_str(), "Running");
         assert_eq!(ServiceState::from_u32(1), ServiceState::Stopped);
         assert_eq!(ServiceState::Stopped.as_str(), "Stopped");
+    }
+
+    #[test]
+    fn ip_scope_classification() {
+        assert_eq!(IpAddrKind::V4([127, 0, 0, 1]).scope(), IpScope::Loopback);
+        assert_eq!(IpAddrKind::V4([192, 168, 1, 50]).scope(), IpScope::PrivateLan);
+        assert_eq!(IpAddrKind::V4([10, 0, 2, 15]).scope(), IpScope::PrivateLan);
+        assert_eq!(IpAddrKind::V4([172, 20, 1, 1]).scope(), IpScope::PrivateLan);
+        assert_eq!(IpAddrKind::V4([100, 64, 1, 1]).scope(), IpScope::CarrierGradeNat);
+        assert_eq!(IpAddrKind::V4([8, 8, 8, 8]).scope(), IpScope::PublicWan);
+        assert!(IpAddrKind::V4([8, 8, 8, 8]).scope().is_public());
+        assert!(!IpAddrKind::V4([192, 168, 1, 1]).scope().is_public());
     }
 }

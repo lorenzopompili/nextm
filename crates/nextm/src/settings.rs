@@ -19,6 +19,7 @@ pub const METRIC_NET: u32 = 1 << 2;
 pub const METRIC_TEMP_ACPI: u32 = 1 << 3;
 pub const METRIC_TEMP_GPU: u32 = 1 << 4;
 pub const METRIC_TEMP_DISK: u32 = 1 << 5;
+pub const METRIC_GPU: u32 = 1 << 6;
 
 pub const ICON_CPU: u32 = 1 << 0;
 pub const ICON_RAM: u32 = 1 << 1;
@@ -26,12 +27,14 @@ pub const ICON_NET: u32 = 1 << 2;
 pub const ICON_TEMP_ACPI: u32 = 1 << 3;
 pub const ICON_TEMP_GPU: u32 = 1 << 4;
 pub const ICON_TEMP_DISK: u32 = 1 << 5;
+pub const ICON_GPU: u32 = 1 << 6;
 
 pub const ICON_SYMBOL_CPU: u32 = 1 << 0;
 pub const ICON_SYMBOL_RAM: u32 = 1 << 1;
 pub const ICON_SYMBOL_TEMP_ACPI: u32 = 1 << 2;
 pub const ICON_SYMBOL_TEMP_GPU: u32 = 1 << 3;
 pub const ICON_SYMBOL_TEMP_DISK: u32 = 1 << 4;
+pub const ICON_SYMBOL_GPU: u32 = 1 << 5;
 
 /// Modalità di calcolo della CPU (tempo CPU o Utilità).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -103,6 +106,38 @@ pub struct Settings {
     pub net_bits: bool,
     /// LUID della GPU selezionata (se ce n'è più di una).
     pub gpu_luid: u64,
+    /// Mostra i processi con maggior consumo CPU all'hover sul riquadro.
+    pub hover_top_cpu: bool,
+    /// Mostra i processi con maggior consumo RAM all'hover sul riquadro.
+    pub hover_top_ram: bool,
+    /// Numero N di processi top da mostrare (retrocompatibilità).
+    pub hover_top_n: u8,
+    /// Numero N di processi top CPU (campo libero 1..=25).
+    pub hover_top_n_cpu: u8,
+    /// Numero N di processi top RAM (campo libero 1..=25).
+    pub hover_top_n_ram: u8,
+    /// Numero N di processi top Rete/IO (campo libero 1..=25).
+    pub hover_top_n_net: u8,
+    /// Mostra i mini grafici sparkline dell'andamento recente (30s) su hover.
+    pub hover_sparklines: bool,
+    /// Mostra i processi con maggior traffico di rete/I/O all'hover sul riquadro.
+    pub hover_top_net: bool,
+    /// Mostra la sezione GPU e VRAM all'hover sul riquadro.
+    pub hover_gpu: bool,
+    /// Avviso proattivo per carico CPU elevato.
+    pub alert_cpu: bool,
+    /// Soglia critica CPU % (campo libero 1..=100).
+    pub alert_cpu_threshold: u8,
+    /// Avviso proattivo per memoria RAM elevata.
+    pub alert_ram: bool,
+    /// Soglia critica RAM % (campo libero 1..=100).
+    pub alert_ram_threshold: u8,
+    /// Avviso proattivo per disco in esaurimento.
+    pub alert_disk: bool,
+    /// Soglia critica spazio occupato disco % (campo libero 1..=100).
+    pub alert_disk_threshold: u8,
+    /// Registratore blackbox (session flight recorder su CSV).
+    pub blackbox_recording: bool,
 }
 
 impl Default for Settings {
@@ -121,7 +156,8 @@ impl Default for Settings {
                 | ICON_SYMBOL_RAM
                 | ICON_SYMBOL_TEMP_ACPI
                 | ICON_SYMBOL_TEMP_GPU
-                | ICON_SYMBOL_TEMP_DISK,
+                | ICON_SYMBOL_TEMP_DISK
+                | ICON_SYMBOL_GPU,
             cpu_mode: CpuMode::Standard,
             saturation_mode: SaturationMode::Always,
             cpu_per_core_hover: false,
@@ -130,13 +166,29 @@ impl Default for Settings {
             net_luid: 0,
             net_bits: false,
             gpu_luid: 0,
+            hover_top_cpu: false,
+            hover_top_ram: false,
+            hover_top_n: 5,
+            hover_top_n_cpu: 5,
+            hover_top_n_ram: 5,
+            hover_top_n_net: 5,
+            hover_sparklines: true,
+            hover_top_net: false,
+            hover_gpu: true,
+            alert_cpu: false,
+            alert_cpu_threshold: 90,
+            alert_ram: false,
+            alert_ram_threshold: 90,
+            alert_disk: false,
+            alert_disk_threshold: 90,
+            blackbox_recording: false,
         }
     }
 }
 
 impl Settings {
     /// Le coppie da salvare, sempre nello stesso ordine.
-    pub fn to_pairs(self) -> [(&'static str, u32); 19] {
+    pub fn to_pairs(self) -> [(&'static str, u32); 35] {
         let mut power = 0;
         if self.pause_display {
             power |= POWER_PAUSE_DISPLAY;
@@ -194,6 +246,22 @@ impl Settings {
             ("NetBits", u32::from(self.net_bits)),
             ("GpuLuidLo", (self.gpu_luid & 0xFFFF_FFFF) as u32),
             ("GpuLuidHi", (self.gpu_luid >> 32) as u32),
+            ("HoverTopCpu", u32::from(self.hover_top_cpu)),
+            ("HoverTopRam", u32::from(self.hover_top_ram)),
+            ("HoverTopN", self.hover_top_n as u32),
+            ("HoverSparklines", u32::from(self.hover_sparklines)),
+            ("HoverTopNet", u32::from(self.hover_top_net)),
+            ("HoverGpu", u32::from(self.hover_gpu)),
+            ("HoverTopNCpu", self.hover_top_n_cpu as u32),
+            ("HoverTopNRam", self.hover_top_n_ram as u32),
+            ("HoverTopNNet", self.hover_top_n_net as u32),
+            ("AlertCpu", u32::from(self.alert_cpu)),
+            ("AlertCpuThreshold", self.alert_cpu_threshold as u32),
+            ("AlertRam", u32::from(self.alert_ram)),
+            ("AlertRamThreshold", self.alert_ram_threshold as u32),
+            ("AlertDisk", u32::from(self.alert_disk)),
+            ("AlertDiskThreshold", self.alert_disk_threshold as u32),
+            ("BlackboxRecording", u32::from(self.blackbox_recording)),
         ]
     }
 
@@ -234,6 +302,22 @@ impl Settings {
         let gpu_lo = get("GpuLuidLo").unwrap_or(0);
         let gpu_hi = get("GpuLuidHi").unwrap_or(0);
         let gpu_luid = (u64::from(gpu_hi) << 32) | u64::from(gpu_lo);
+        let hover_top_cpu = get("HoverTopCpu").is_some_and(|v| v != 0);
+        let hover_top_ram = get("HoverTopRam").is_some_and(|v| v != 0);
+        let hover_top_n_cpu = get("HoverTopNCpu").unwrap_or(get("HoverTopN").unwrap_or(5)).clamp(1, 25) as u8;
+        let hover_top_n_ram = get("HoverTopNRam").unwrap_or(get("HoverTopN").unwrap_or(5)).clamp(1, 25) as u8;
+        let hover_top_n_net = get("HoverTopNNet").unwrap_or(get("HoverTopN").unwrap_or(5)).clamp(1, 25) as u8;
+        let hover_top_n = hover_top_n_cpu;
+        let hover_sparklines = get("HoverSparklines").map_or(d.hover_sparklines, |v| v != 0);
+        let hover_top_net = get("HoverTopNet").is_some_and(|v| v != 0);
+        let hover_gpu = get("HoverGpu").map_or(d.hover_gpu, |v| v != 0);
+        let alert_cpu = get("AlertCpu").is_some_and(|v| v != 0);
+        let alert_cpu_threshold = get("AlertCpuThreshold").unwrap_or(90).clamp(1, 100) as u8;
+        let alert_ram = get("AlertRam").is_some_and(|v| v != 0);
+        let alert_ram_threshold = get("AlertRamThreshold").unwrap_or(90).clamp(1, 100) as u8;
+        let alert_disk = get("AlertDisk").is_some_and(|v| v != 0);
+        let alert_disk_threshold = get("AlertDiskThreshold").unwrap_or(90).clamp(1, 100) as u8;
+        let blackbox_recording = get("BlackboxRecording").is_some_and(|v| v != 0);
 
         Settings {
             interval_ms,
@@ -254,6 +338,22 @@ impl Settings {
             net_luid,
             net_bits,
             gpu_luid,
+            hover_top_cpu,
+            hover_top_ram,
+            hover_top_n,
+            hover_top_n_cpu,
+            hover_top_n_ram,
+            hover_top_n_net,
+            hover_sparklines,
+            hover_top_net,
+            hover_gpu,
+            alert_cpu,
+            alert_cpu_threshold,
+            alert_ram,
+            alert_ram_threshold,
+            alert_disk,
+            alert_disk_threshold,
+            blackbox_recording,
         }
     }
 
@@ -270,7 +370,7 @@ impl Settings {
     }
 
     pub fn has_any_icon(&self) -> bool {
-        self.icons & (ICON_CPU | ICON_RAM | ICON_NET | ICON_TEMP_ACPI | ICON_TEMP_GPU | ICON_TEMP_DISK) != 0
+        self.icons & (ICON_CPU | ICON_RAM | ICON_NET | ICON_TEMP_ACPI | ICON_TEMP_GPU | ICON_TEMP_DISK | ICON_GPU) != 0
     }
 
     /// `true` se la notifica del primo avvio va mostrata a questo avvio.
@@ -325,6 +425,22 @@ mod tests {
         assert_eq!(d.net_luid, 0);
         assert!(!d.net_bits);
         assert_eq!(d.gpu_luid, 0);
+        assert!(!d.hover_top_cpu);
+        assert!(!d.hover_top_ram);
+        assert_eq!(d.hover_top_n, 5);
+        assert_eq!(d.hover_top_n_cpu, 5);
+        assert_eq!(d.hover_top_n_ram, 5);
+        assert_eq!(d.hover_top_n_net, 5);
+        assert!(d.hover_sparklines);
+        assert!(!d.hover_top_net);
+        assert!(d.hover_gpu);
+        assert!(!d.alert_cpu);
+        assert_eq!(d.alert_cpu_threshold, 90);
+        assert!(!d.alert_ram);
+        assert_eq!(d.alert_ram_threshold, 90);
+        assert!(!d.alert_disk);
+        assert_eq!(d.alert_disk_threshold, 90);
+        assert!(!d.blackbox_recording);
     }
 
     #[test]
@@ -338,9 +454,9 @@ mod tests {
             ecoqos: false,
             first_run_done: true,
             first_run_shown: 2,
-            metrics: METRIC_CPU | METRIC_NET | METRIC_TEMP_ACPI | METRIC_TEMP_GPU,
-            icons: ICON_CPU | ICON_RAM | ICON_NET | ICON_TEMP_GPU,
-            icon_symbols: ICON_SYMBOL_CPU | ICON_SYMBOL_TEMP_GPU,
+            metrics: METRIC_CPU | METRIC_NET | METRIC_TEMP_ACPI | METRIC_TEMP_GPU | METRIC_GPU,
+            icons: ICON_CPU | ICON_RAM | ICON_NET | ICON_TEMP_GPU | ICON_GPU,
+            icon_symbols: ICON_SYMBOL_CPU | ICON_SYMBOL_TEMP_GPU | ICON_SYMBOL_GPU,
             cpu_mode: CpuMode::Utility,
             saturation_mode: SaturationMode::OnDemand,
             cpu_per_core_hover: true,
@@ -349,6 +465,22 @@ mod tests {
             net_luid: 0x1234_5678_9ABC_DEF0,
             net_bits: true,
             gpu_luid: 0xCAFE_BABE_DEAD_BEEF,
+            hover_top_cpu: true,
+            hover_top_ram: true,
+            hover_top_n: 7,
+            hover_top_n_cpu: 7,
+            hover_top_n_ram: 12,
+            hover_top_n_net: 4,
+            hover_sparklines: false,
+            hover_top_net: true,
+            hover_gpu: false,
+            alert_cpu: true,
+            alert_cpu_threshold: 85,
+            alert_ram: true,
+            alert_ram_threshold: 92,
+            alert_disk: true,
+            alert_disk_threshold: 95,
+            blackbox_recording: true,
         };
         assert_eq!(roundtrip(custom), custom);
     }

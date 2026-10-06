@@ -3,8 +3,10 @@
 pub mod cpu;
 pub mod disk;
 pub mod dll;
+pub mod gpu;
 pub mod inspect_engine;
 pub mod net;
+pub mod process_top;
 pub mod processes;
 pub mod ram;
 pub mod services;

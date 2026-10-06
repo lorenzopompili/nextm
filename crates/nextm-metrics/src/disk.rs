@@ -6,11 +6,17 @@ pub struct MountedDisk {
     pub letter: char,
     pub total_bytes: u64,
     pub free_bytes: u64,
+    pub read_bps: u64,
+    pub write_bps: u64,
 }
 
 impl MountedDisk {
     pub const fn new(letter: char, total_bytes: u64, free_bytes: u64) -> Self {
-        Self { letter, total_bytes, free_bytes }
+        Self { letter, total_bytes, free_bytes, read_bps: 0, write_bps: 0 }
+    }
+
+    pub const fn with_speed(letter: char, total_bytes: u64, free_bytes: u64, read_bps: u64, write_bps: u64) -> Self {
+        Self { letter, total_bytes, free_bytes, read_bps, write_bps }
     }
 
     /// Restituisce i byte occupati sull'unità.
@@ -25,6 +31,30 @@ impl MountedDisk {
         } else {
             ((self.used_bytes() as u128 * 100) / self.total_bytes as u128).min(100) as u8
         }
+    }
+}
+
+/// Formatta una velocità di I/O disco (es. "124.5 MB/s", "1.2 GB/s", "850 KB/s").
+pub fn format_disk_speed(bytes_per_sec: u64) -> String {
+    const KB: u64 = 1000;
+    const MB: u64 = 1000 * KB;
+    const GB: u64 = 1000 * MB;
+
+    if bytes_per_sec >= GB {
+        let int = bytes_per_sec / GB;
+        let dec = (bytes_per_sec % GB) / (100 * MB);
+        format!("{int}.{dec} GB/s")
+    } else if bytes_per_sec >= MB {
+        let int = bytes_per_sec / MB;
+        let dec = (bytes_per_sec % MB) / (100 * KB);
+        format!("{int}.{dec} MB/s")
+    } else if bytes_per_sec >= KB {
+        let kb = bytes_per_sec / KB;
+        format!("{kb} KB/s")
+    } else if bytes_per_sec > 0 {
+        format!("{bytes_per_sec} B/s")
+    } else {
+        "0 B/s".to_string()
     }
 }
 

@@ -1,19 +1,19 @@
-# Sicurezza
+# Security Policy
 
-## Versioni supportate
+## Supported Versions
 
-Riceve correzioni di sicurezza solo l'ultima versione pubblicata di nextm.
+Only the latest published release of nextm receives security updates and bug fixes.
 
-## Segnalare una vulnerabilità
+## Reporting a Vulnerability
 
-Non aprire una issue pubblica. Usa la segnalazione privata di GitHub: scheda **Security** del repository, pulsante
-**Report a vulnerability**. Indica la versione (`nextm --version`), la versione di Windows e i passi per riprodurre
-il problema. Riceverai una risposta appena possibile.
+Please do not open a public issue for security concerns. Use GitHub's private vulnerability reporting mechanism: go to the repository's **Security** tab and click **Report a vulnerability**. Provide your nextm version (`nextm --version`), Windows build information, and detailed steps to reproduce the issue. You will receive a prompt response.
 
-## Cosa fa nextm per limitare i rischi
+## Defensive Architecture & Hardening
 
-- Gira senza privilegi di amministratore e senza driver.
-- Non apre connessioni di rete e non ha aggiornamenti automatici.
-- Carica le DLL solo dalla cartella di sistema: `SetDefaultDllDirectories` all'avvio e `/DEPENDENTLOADFLAG:0x800`
-  nell'eseguibile, verificato in CI da `cargo xtask check-imports`.
-- Non usa `ShellExecute`: programmi e pagine delle Impostazioni si aprono con `CreateProcessW`.
+nextm is engineered from the ground up to minimize attack surface and ensure system stability:
+
+- **Zero Kernel Drivers:** Operates entirely in user mode without deploying or requiring any third-party ring-0 drivers.
+- **Least Privilege:** Runs by default as a standard user without mandatory Administrator elevation.
+- **Strict DLL Search Order:** Neutralizes DLL hijacking by calling `SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32)` at startup and enforcing `/DEPENDENTLOADFLAG:0x800` in the PE header, strictly enforced in CI by `cargo xtask check-imports`.
+- **Safe Process Spawning:** Avoids legacy shell execution; system shortcuts and internal utilities are launched explicitly via `CreateProcessW` with sanitized arguments.
+- **Memory Safety:** Implemented in Rust with all unsafe Win32/NT FFI boundaries strictly scoped, auditable, and wrapped in RAII lifecycles.

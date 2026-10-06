@@ -3,7 +3,7 @@
 
 #define MyAppName "nextm"
 #ifndef MyAppVersion
-#define MyAppVersion "0.1.2"
+#define MyAppVersion "0.1.4"
 #endif
 #define MyAppPublisher "Lorenzo Pompili"
 #define MyAppURL "https://github.com/lorenzopompili/nextm"

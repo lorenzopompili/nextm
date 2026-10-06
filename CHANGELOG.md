@@ -5,17 +5,71 @@ Tutte le modifiche rilevanti di nextm sono annotate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto usa il
 [versionamento semantico](https://semver.org/lang/it/).
 
-## [0.1.2] - 2026-10-05
+## [0.1.4] - 2026-10-06
+
+### Corretto
+- **Ridimensionamento Dinamico e Ancoraggio Fluido del Riquadro Hover**: risolto definitivamente il disallineamento per cui l'espansione del riquadro informativo (ad es. all'arrivo dei top process o delle velocità disco) richiedeva di allontanare e riavvicinare il mouse. `refresh_if_visible` calcola ora in tempo reale `calculate_dimensions` e `calculate_position`, invocando `SetWindowPos` senza perdere il focus (`SWP_NOACTIVATE`) e mantenendo l'ancoraggio fluido verso l'alto sopra la barra delle applicazioni.
+- **Risoluzione Leak Handle DWM**: aggiunto `FreeLibrary(dwm)` in `apply_dwm_styling` e memorizzato lo stato `is_dark` nella struttura della finestra hover, prevenendo caricamenti ripetuti e perdite di riferimenti del modulo `dwmapi.dll`.
+- **Pre-riscaldamento Immediato dei Campionatori**: `TopProcessTracker` e `DiskSpeedSampler` vengono pre-riscaldati all'avvio in `App::new()`, rendendo disponibili le metriche e i delta fin dal primissimo passaggio del mouse.
+
+### Migliorato
+- **Grafici Sparkline Più Alti con Indicatori Min / Med / Max**: altezza delle sparkline nel riquadro hover portata a 30 px con linea guida mediana tratteggiata al 50%, bordo di contrasto a 1 px e nuova riga di riepilogo statistico testuale con valori estremi e medi (`min: X% · med: Y% · max: Z%`).
+- **Ottimizzazione Prestazioni e Consumo CPU a Regime**:
+  - Eliminata l'allocazione dinamica di centinaia di stringhe `to_lowercase()` al secondo in `TopProcessTracker`, aggregando i processi sul posto con confronto ASCII case-insensitive.
+  - Sostituito il ciclo continuo di caricamento/scaricamento libreria in `power::check_cpu_throttling()` con caching thread-safe `OnceLock` del puntatore `CallNtPowerInformation` e buffer a stack per macchine fino a 64 core logici (zero allocazioni heap).
+  - Introdotto caching del nome GPU per LUID in `GpuMetricsSampler`, evitando interrogazioni ridondanti al registro di sistema a ogni secondo.
+  - Implementato `release_memory()` su `InspectEngine` e `InspectState` alla chiusura e all'occultamento della finestra di ispezione, restituendo all'istante la memoria del set di lavoro al sistema operativo.
+
+## [0.1.3] - 2026-10-06
+
+### Modificato
+- **Allargamento Riquadro Hover**: la larghezza del riquadro informativo popup è stata portata a 480 px in presenza di dischi montati, garantendo spazio generoso affinché le velocità di lettura/scrittura e lo spazio occupato non vengano mai troncati o tagliati.
+- **Stabilizzazione del Refresh I/O Disco**: introdotto intervallo minimo di 750 ms e caching dei campioni in `DiskSpeedSampler`, eliminando sfarfallii, spike rumorosi e variazioni repentine della formattazione.
+- **Layout Costante Velocità Disco**: gli indicatori `[↓ X MB/s ↑ Y MB/s]` nel riquadro hover mantengono un layout e una formattazione stabili anche quando i tassi sono a zero (`0 B/s`), evitando contrazioni e scatti del testo.
+- **Ottimizzazione Eventi Hover Tray**: le chiamate di ridisegno e ricalcolo durante il movimento del mouse (`WM_MOUSEMOVE`) sono ora subordinate al cambio effettivo di icona/ancora, prevenendo flood di aggiornamenti inutili a frequenza troppo elevata.
+
+## [0.1.2] - 2026-10-06
 
 ### Aggiunto
+- **Icona Carico GPU % nella Barra di Sistema (Tray)**:
+  - Nuova icona dedicata al monitoraggio percentuale di utilizzo della scheda video GPU (separata e indipendente dall'icona temperatura GPU).
+  - Glifo hardware dedicato, soglie cromatiche dinamiche (Normale, Warning ad alto carico, Saturo/Rosso) e toggle di attivazione nelle Impostazioni.
+- **Velocità I/O Dischi in Tempo Reale (Read & Write MB/s)**:
+  - Campionatore continuo del throughput di lettura e scrittura per tutte le unità montate (interne NVMe/SATA ed esterne USB) tramite `IOCTL_DISK_PERFORMANCE` (richiede zero privilegi elevati).
+  - Visualizzazione nel riquadro hover popup dei tassi istantanei per ogni disco attivo (`[↓ X.X MB/s  ↑ Y.Y MB/s]`).
+- **Rilevamento Thermal & Power Throttling della CPU**:
+  - Interrogazione continua dello stato energetico e di clock tramite `CallNtPowerInformation` caricata dinamicamente da `powrprof.dll` (0 nuove dipendenze statiche nel PE).
+  - Rilevamento di strozzature di frequenza per limiti termici/elettrici o limiti BIOS, visualizzato con il banner ambra `⚠️ THERMAL / POWER THROTTLING ATTIVO` nel riquadro hover.
+- **Quick Kill per Finestre e Applicazioni Bloccate**:
+  - Scansione delle finestre di primo livello con `IsHungAppWindow`.
+  - Banner rosso pillola `⚠️ [Nome] [Termina subito]` nell'intestazione della finestra Ispeziona con chiusura forzata istantanea a 1 click.
+  - Evidenziazione in rosso dei processi bloccati con badge `[⚠️ Non risponde]` nella lista processi e filtro rapido con `hung` o `bloccato`.
+- **Memory Leak Hunter**:
+  - Tracciamento della memoria Working Set per processo su finestra mobile.
+  - Identificazione automatica di crescita monotonica prolungata ($\ge 15\text{ MB}$) con badge giallo `[⚠️ Leak +X MB]` e filtro rapido `leak:` o `leak`.
+- **Classificazione Geo-IP Scope & Lookup WHOIS (ipinfo.io)**:
+  - Classificazione degli indirizzi IP remoti dei socket di rete in `Loopback`, `LAN`, `CGNAT`, `Link-Local`, `Multicast` e `WAN`.
+  - Evidenziazione in giallo e badge `[WAN]` per le connessioni verso Internet pubblico.
+  - Voce di menu contestuale **🌐 Cerca WHOIS / Geo-IP (ipinfo.io)** che apre direttamente il browser con dettagli geografici e ASN.
+- **Registratore Telemetria Blackbox Flight Recorder**:
+  - Flight recorder leggero che scrive ogni 2 secondi la telemetria completa di sistema (CPU, RAM, Rete up/down, GPU %, temperature, top processi) in formato CSV circolare con rotazione a 5 MB in `%LOCALAPPDATA%\nextm\blackbox\nextm_blackbox.csv`.
+  - Toggle di abilitazione e pulsante "📁 Apri cartella Blackbox (CSV)" nella scheda Impostazioni.
+- **Configurazione Top Processi & Allarmi con Soglie Parametrizzabili**:
+  - Selettori continui con pulsanti stepper per impostare liberamente il numero N di processi Top CPU, RAM e Rete (da 1 a 25).
+  - Stepper per le percentuali critiche degli avvisi proattivi tray per CPU (1..=100%), RAM (1..=100%) e Spazio Disco (1..=100%).
+- **Tracciamento Stabile della Selezione**:
+  - La selezione nelle schede Processi, Sockets e Servizi è ora ancorata all'identità logica della riga (PID, chiave socket, nome servizio) anziché all'indice numerico visivo, impedendo la perdita della selezione durante il riordinamento automatico continuo per carico.
 - **Spazio dischi montati su hover**:
   - Scansione dinamica e live di tutte le unità disco montate (SSD, HDD, chiavette e dischi esterni USB) tramite `GetLogicalDrives` e `GetDiskFreeSpaceExW`.
   - Visualizzazione nel riquadro popup hover di: lettera unità, percentuale occupata, barra progressiva grafica, spazio occupato e spazio rimanente in formato chiaro (TB, GB, MB).
-  - Rilevamento in tempo reale: collegamento e scollegamento istantaneo di drive e chiavette USB senza riavvio e senza cache.
-  - Opzione "Spazio dischi su hover" nella scheda Impostazioni (Prestazioni & Calcolo) per abilitare o disabilitare la visualizzazione.
 - **Collegamenti ipertestuali e versione dinamica**:
   - Versione dinamica automatica sincronizzata da `env!("CARGO_PKG_VERSION")` nella scheda Informazioni.
   - Hyperlink con cursore a manina (`IDC_HAND`) per contatto autore via email (`mailto:lorenzo.pompili@gmail.com`) e pagina GitHub (`https://github.com/lorenzopompili/nextm`).
+
+### Corretto
+- **Risolto bug di sfarfallio e oscillazione verticale (jitter) del riquadro hover**:
+  - Implementata cache di campionamento a 1000 ms per i processi più pesanti, eliminando i ricalcoli ridondanti a 50 Hz durante il tracking del puntatore del mouse.
+  - Ottimizzato il calcolo delle coordinate con clamping stabile ai bordi dello schermo e limitazione delle righe a un massimo di 5 processi top + riepilogo per prevenire overflow dell'area visibile.
 
 ## [0.1.1] - 2026-10-02
 

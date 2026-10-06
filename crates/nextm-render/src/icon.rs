@@ -156,6 +156,7 @@ fn draw_symbol(canvas: &mut Canvas, sym: &SymbolDef, x0: i32, y0: i32, color: Co
 pub enum MetricSymbol {
     Cpu,
     Ram,
+    Gpu,
     TempAcpi,
     TempGpu,
     TempDisk,
@@ -182,8 +183,8 @@ pub fn draw_metric_icon(canvas: &mut Canvas, symbol: MetricSymbol, text: &str, c
     let sym_def = match symbol {
         MetricSymbol::Cpu => &CPU_SYMBOL,
         MetricSymbol::Ram => &RAM_SYMBOL,
+        MetricSymbol::Gpu | MetricSymbol::TempGpu => &TEMP_GPU_SYMBOL,
         MetricSymbol::TempAcpi => &TEMP_ACPI_SYMBOL,
-        MetricSymbol::TempGpu => &TEMP_GPU_SYMBOL,
         MetricSymbol::TempDisk => &TEMP_DISK_SYMBOL,
     };
     let sym_scale = if size >= 28 { 2 } else { 1 };
@@ -205,6 +206,11 @@ pub fn draw_cpu_icon(canvas: &mut Canvas, text: &str, color: Color, bar: Option<
 /// Disegna l'icona della RAM: mini modulo DIMM in alto, percentuale di carico in basso.
 pub fn draw_ram_icon(canvas: &mut Canvas, text: &str, color: Color) {
     draw_metric_icon(canvas, MetricSymbol::Ram, text, color, None);
+}
+
+/// Disegna l'icona dell'impegno GPU: mini scheda video in alto, percentuale di carico in basso.
+pub fn draw_gpu_icon(canvas: &mut Canvas, text: &str, color: Color) {
+    draw_metric_icon(canvas, MetricSymbol::Gpu, text, color, None);
 }
 
 /// Disegna l'icona della temperatura ACPI: mini termometro in alto, valore con ° in basso.

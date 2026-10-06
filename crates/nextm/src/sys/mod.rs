@@ -1,10 +1,12 @@
 //! Tutte le chiamate a Windows di nextm, racchiuse in involucri sicuri.
 
 pub mod autostart;
+pub mod blackbox;
 pub mod console;
 pub mod darkmenu;
 pub mod elevation;
 pub mod hover;
+pub mod hung;
 pub mod icon;
 pub mod inspect_win;
 pub mod menu;

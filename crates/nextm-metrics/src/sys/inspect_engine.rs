@@ -172,6 +172,21 @@ impl InspectEngine {
     pub fn close_tcp_v4(&self, local_ip: [u8; 4], local_port: u16, remote_ip: [u8; 4], remote_port: u16) -> bool {
         self.socket_scanner.as_ref().is_some_and(|s| s.close_tcp_v4(local_ip, local_port, remote_ip, remote_port))
     }
+
+    /// Rilascia tutta la memoria allocata e i buffer del motore.
+    pub fn release(&mut self) {
+        self.proc_scanner.release();
+        self.scratch_procs.clear();
+        self.scratch_procs.shrink_to_fit();
+        self.scratch_sockets.clear();
+        self.scratch_sockets.shrink_to_fit();
+        self.scratch_services.clear();
+        self.scratch_services.shrink_to_fit();
+        self.prev_cpu.clear();
+        self.next_prev_cpu.clear();
+        self.pid_to_idx.clear();
+        self.last_tick_ms = 0;
+    }
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@
 use core::mem::zeroed;
 use core::ptr::{null, null_mut};
 
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
+use windows_sys::Win32::Foundation::{FreeLibrary, HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreateSolidBrush, DeleteDC,
     DeleteObject, EndPaint, FillRect, FrameRect, GetMonitorInfoW, GetTextExtentPoint32W, HDC, HFONT, InvalidateRect,
@@ -73,6 +73,26 @@ pub struct HoverSnapshot {
 
     pub disk_space_active: bool,
     pub mounted_disks: Vec<nextm_metrics::disk::MountedDisk>,
+
+    pub top_cpu_procs: Vec<(String, String)>,
+    pub top_ram_procs: Vec<(String, String)>,
+    pub top_net_procs: Vec<(String, String)>,
+
+    pub cpu_sparkline: Vec<u8>,
+    pub ram_sparkline: Vec<u8>,
+    pub net_sparkline: Vec<u8>,
+    pub net_spark_min: Option<String>,
+    pub net_spark_avg: Option<String>,
+    pub net_spark_max: Option<String>,
+
+    pub gpu_active: bool,
+    pub gpu_name: Option<String>,
+    pub gpu_3d_pct: Option<u8>,
+    pub vram_used_mb: Option<u64>,
+    pub vram_total_mb: Option<u64>,
+
+    pub cpu_throttled: bool,
+    pub cpu_mhz: Option<u32>,
 }
 
 impl Default for HoverSnapshot {
@@ -106,6 +126,22 @@ impl Default for HoverSnapshot {
             temp_disk_label: None,
             disk_space_active: true,
             mounted_disks: Vec::new(),
+            top_cpu_procs: Vec::new(),
+            top_ram_procs: Vec::new(),
+            top_net_procs: Vec::new(),
+            cpu_sparkline: Vec::new(),
+            ram_sparkline: Vec::new(),
+            net_sparkline: Vec::new(),
+            net_spark_min: None,
+            net_spark_avg: None,
+            net_spark_max: None,
+            gpu_active: false,
+            gpu_name: None,
+            gpu_3d_pct: None,
+            vram_used_mb: None,
+            vram_total_mb: None,
+            cpu_throttled: false,
+            cpu_mhz: None,
         }
     }
 }
@@ -183,8 +219,11 @@ pub struct HoverWindow {
     hwnd: HWND,
     width: i32,
     height: i32,
+    pos_x: i32,
+    pos_y: i32,
     anchor_x: i32,
     anchor_y: i32,
+    is_dark: Option<bool>,
 }
 
 impl HoverWindow {
@@ -217,7 +256,16 @@ impl HoverWindow {
                 return None;
             }
 
-            Some(HoverWindow { hwnd, width: 300, height: 200, anchor_x: 0, anchor_y: 0 })
+            Some(HoverWindow {
+                hwnd,
+                width: 300,
+                height: 200,
+                pos_x: 0,
+                pos_y: 0,
+                anchor_x: 0,
+                anchor_y: 0,
+                is_dark: None,
+            })
         }
     }
 
@@ -254,11 +302,14 @@ impl HoverWindow {
     }
 
     pub fn show_or_update(&mut self, data: HoverSnapshot, x: i32, y: i32) {
+        let was_visible = self.is_visible();
+        let anchor_moved = (x - self.anchor_x).abs() > 30 || (y - self.anchor_y).abs() > 30;
         self.anchor_x = x;
         self.anchor_y = y;
 
         let is_dark = data.is_dark;
         let (req_w, req_h) = calculate_dimensions(&data);
+        let size_changed = self.width != req_w || self.height != req_h;
         self.width = req_w;
         self.height = req_h;
 
@@ -267,25 +318,47 @@ impl HoverWindow {
         });
 
         unsafe {
-            apply_dwm_styling(self.hwnd, is_dark);
+            if self.is_dark != Some(is_dark) {
+                apply_dwm_styling(self.hwnd, is_dark);
+                self.is_dark = Some(is_dark);
+            }
+            if !was_visible || anchor_moved || size_changed {
+                let (pos_x, pos_y) = calculate_position(x, y, req_w, req_h);
+                self.pos_x = pos_x;
+                self.pos_y = pos_y;
+                SetWindowPos(self.hwnd, HWND_TOPMOST, pos_x, pos_y, req_w, req_h, SWP_NOACTIVATE);
+            }
 
-            // Calcola la posizione sopra la tray / cursore, assicurandosi che stia nello schermo
-            let (pos_x, pos_y) = calculate_position(x, y, req_w, req_h);
-
-            SetWindowPos(self.hwnd, HWND_TOPMOST, pos_x, pos_y, req_w, req_h, SWP_NOACTIVATE);
-
+            if !was_visible {
+                ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
+            }
             InvalidateRect(self.hwnd, null(), 0);
             UpdateWindow(self.hwnd);
-            ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
         }
     }
 
     pub fn refresh_if_visible(&mut self, data: HoverSnapshot) {
         if self.is_visible() {
+            let is_dark = data.is_dark;
+            let (req_w, req_h) = calculate_dimensions(&data);
+            let size_changed = self.width != req_w || self.height != req_h;
+            self.width = req_w;
+            self.height = req_h;
+
             CURRENT_DATA.with(|cell| {
                 *cell.borrow_mut() = Some(data);
             });
             unsafe {
+                if self.is_dark != Some(is_dark) {
+                    apply_dwm_styling(self.hwnd, is_dark);
+                    self.is_dark = Some(is_dark);
+                }
+                if size_changed {
+                    let (pos_x, pos_y) = calculate_position(self.anchor_x, self.anchor_y, req_w, req_h);
+                    self.pos_x = pos_x;
+                    self.pos_y = pos_y;
+                    SetWindowPos(self.hwnd, HWND_TOPMOST, pos_x, pos_y, req_w, req_h, SWP_NOACTIVATE);
+                }
                 InvalidateRect(self.hwnd, null(), 0);
                 UpdateWindow(self.hwnd);
             }
@@ -320,14 +393,33 @@ unsafe fn apply_dwm_styling(hwnd: HWND, is_dark: bool) {
         let dark: u32 = if is_dark { 1 } else { 0 };
         set_attr(hwnd, 20, (&raw const dark).cast(), size_of::<u32>() as u32);
     }
+    FreeLibrary(dwm);
+}
+
+const MAX_HOVER_TOP_PROCS: usize = 5;
+
+fn top_procs_row_count(len: usize) -> usize {
+    if len == 0 {
+        0
+    } else if len <= MAX_HOVER_TOP_PROCS {
+        len
+    } else {
+        MAX_HOVER_TOP_PROCS + 1
+    }
 }
 
 fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
     let scale = data.dpi as f32 / 96.0;
-    let base_w = if data.cpu_cores.as_ref().is_some_and(|c| c.len() > 16) {
+    let base_w = if data.disk_space_active && !data.mounted_disks.is_empty() {
+        480.0
+    } else if data.cpu_cores.as_ref().is_some_and(|c| c.len() > 16) {
+        360.0
+    } else if !data.top_cpu_procs.is_empty()
+        || !data.top_ram_procs.is_empty()
+        || !data.top_net_procs.is_empty()
+        || (data.gpu_active && data.gpu_name.is_some())
+    {
         340.0
-    } else if data.disk_space_active && !data.mounted_disks.is_empty() {
-        320.0
     } else {
         300.0
     };
@@ -336,6 +428,7 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
     let pad_y = (12.0 * scale) as i32;
     let line_h = (16.0 * scale) as i32;
     let group_gap = (12.0 * scale) as i32;
+    let spark_h = (30.0 * scale) as i32;
     let mut h = pad_y * 2;
     let mut has_prev_group = false;
 
@@ -346,8 +439,14 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
         has_prev_group = true;
 
         h += line_h;
+        if data.cpu_throttled {
+            h += line_h;
+        }
         if data.sat_top_proc.is_some() {
             h += (14.0 * scale) as i32;
+        }
+        if !data.cpu_sparkline.is_empty() {
+            h += spark_h + line_h + (4.0 * scale) as i32;
         }
         if let Some(cores) = &data.cpu_cores {
             let n = cores.len();
@@ -363,6 +462,18 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
                 h += rows as i32 * (14.0 * scale) as i32 + (4.0 * scale) as i32;
             }
         }
+        if !data.top_cpu_procs.is_empty() {
+            h += line_h;
+            h += top_procs_row_count(data.top_cpu_procs.len()) as i32 * line_h;
+        }
+    } else if !data.top_cpu_procs.is_empty() {
+        if has_prev_group {
+            h += group_gap;
+        }
+        has_prev_group = true;
+
+        h += line_h;
+        h += top_procs_row_count(data.top_cpu_procs.len()) as i32 * line_h;
     }
 
     if data.ram_active {
@@ -375,6 +486,21 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
         if data.ram_used_x10.is_some() && data.ram_total_x10.is_some() {
             h += line_h;
         }
+        if !data.ram_sparkline.is_empty() {
+            h += spark_h + line_h + (4.0 * scale) as i32;
+        }
+        if !data.top_ram_procs.is_empty() {
+            h += line_h;
+            h += top_procs_row_count(data.top_ram_procs.len()) as i32 * line_h;
+        }
+    } else if !data.top_ram_procs.is_empty() {
+        if has_prev_group {
+            h += group_gap;
+        }
+        has_prev_group = true;
+
+        h += line_h;
+        h += top_procs_row_count(data.top_ram_procs.len()) as i32 * line_h;
     }
 
     if data.net_active {
@@ -386,6 +512,38 @@ fn calculate_dimensions(data: &HoverSnapshot) -> (i32, i32) {
         h += line_h; // Title: Rete (Ethernet)
         h += line_h; // Download
         h += line_h; // Upload
+        if !data.net_sparkline.is_empty() {
+            h += spark_h + line_h + (4.0 * scale) as i32;
+        }
+        if !data.top_net_procs.is_empty() {
+            h += line_h;
+            h += top_procs_row_count(data.top_net_procs.len()) as i32 * line_h;
+        }
+    } else if !data.top_net_procs.is_empty() {
+        if has_prev_group {
+            h += group_gap;
+        }
+        has_prev_group = true;
+
+        h += line_h;
+        h += top_procs_row_count(data.top_net_procs.len()) as i32 * line_h;
+    }
+
+    let has_gpu =
+        data.gpu_active && (data.gpu_name.is_some() || data.gpu_3d_pct.is_some() || data.vram_used_mb.is_some());
+    if has_gpu {
+        if has_prev_group {
+            h += group_gap;
+        }
+        has_prev_group = true;
+
+        h += line_h;
+        if data.gpu_3d_pct.is_some() {
+            h += line_h;
+        }
+        if data.vram_used_mb.is_some() && data.vram_total_mb.is_some() {
+            h += line_h;
+        }
     }
 
     let has_any_temp = data.temp_acpi_active || data.temp_gpu_active || data.temp_disk_active;
@@ -429,15 +587,18 @@ unsafe fn calculate_position(cursor_x: i32, cursor_y: i32, width: i32, height: i
     GetMonitorInfoW(hmon, &mut mi);
     let work = mi.rcWork;
 
+    let mon_mid_y = (work.top + work.bottom) / 2;
+    let mut y = if cursor_y >= mon_mid_y { cursor_y - height - 12 } else { cursor_y + 24 };
+
     let mut x = cursor_x - width / 2;
-    let mut y = cursor_y - height - 12;
 
-    if y < work.top + 8 {
-        y = cursor_y + 24;
-    }
+    let min_x = work.left + 8;
+    let max_x = (work.right - width - 8).max(min_x);
+    x = x.clamp(min_x, max_x);
 
-    x = x.clamp(work.left + 8, work.right - width - 8);
-    y = y.clamp(work.top + 8, work.bottom - height - 8);
+    let min_y = work.top + 8;
+    let max_y = (work.bottom - height - 8).max(min_y);
+    y = y.clamp(min_y, max_y);
 
     (x, y)
 }
@@ -542,6 +703,40 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
 
         cur_y += line_h;
 
+        let spark_h = (30.0 * scale) as i32;
+        if !data.cpu_sparkline.is_empty() {
+            let spark_rc = RECT { left: sub_pad, top: cur_y, right: w - pad_x, bottom: cur_y + spark_h };
+            unsafe {
+                draw_sparkline(
+                    mem_dc,
+                    &spark_rc,
+                    &data.cpu_sparkline,
+                    if is_dark { 0x00FFCD60 } else { 0x00D47800 },
+                    if is_dark { 0x004B3214 } else { 0x00F5E1D0 },
+                    if is_dark { 0x00181818 } else { 0x00EFEFEF },
+                );
+            }
+            cur_y += spark_h + (2.0 * scale) as i32;
+
+            let min = data.cpu_sparkline.iter().copied().min().unwrap_or(0);
+            let max = data.cpu_sparkline.iter().copied().max().unwrap_or(0);
+            let avg =
+                (data.cpu_sparkline.iter().map(|&v| v as u32).sum::<u32>() / data.cpu_sparkline.len() as u32) as u8;
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let mut s_buf = WBuf::<64>::new();
+            s_buf.push_str("min: ");
+            s_buf.push_u32(u32::from(min));
+            s_buf.push_str("% · ");
+            s_buf.push_str(if data.is_it { "med: " } else { "avg: " });
+            s_buf.push_u32(u32::from(avg));
+            s_buf.push_str("% · max: ");
+            s_buf.push_u32(u32::from(max));
+            s_buf.push_str("%");
+            TextOutW(mem_dc, sub_pad, cur_y, s_buf.as_slice().as_ptr(), s_buf.as_slice().len() as i32);
+            cur_y += line_h + (2.0 * scale) as i32;
+        }
+
         // Top process if saturated
         if let Some((name, core100)) = &data.sat_top_proc {
             SelectObject(mem_dc, font_body);
@@ -617,6 +812,85 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
                 cur_y += rows as i32 * core_line_h + (4.0 * scale) as i32;
             }
         }
+
+        if data.cpu_throttled {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_amber);
+            let mut th_buf = WBuf::<64>::new();
+            th_buf.push_str(if data.is_it { "⚠️ Throttling attivo" } else { "⚠️ Throttling active" });
+            if let Some(mhz) = data.cpu_mhz {
+                th_buf.push_str(" (");
+                th_buf.push_u32(mhz);
+                th_buf.push_str(" MHz)");
+            }
+            TextOutW(mem_dc, sub_pad, cur_y, th_buf.as_slice().as_ptr(), th_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+
+        if !data.top_cpu_procs.is_empty() {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let top_hdr = wide!("Top CPU:");
+            TextOutW(mem_dc, sub_pad, cur_y, top_hdr.as_ptr(), (top_hdr.len().saturating_sub(1)) as i32);
+            cur_y += line_h;
+
+            let proc_pad = sub_pad + (8.0 * scale) as i32;
+            let display_n = data.top_cpu_procs.len().min(MAX_HOVER_TOP_PROCS);
+            for (name, val) in &data.top_cpu_procs[..display_n] {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_normal);
+                let mut p_buf = WBuf::<128>::new();
+                p_buf.push_str(name);
+                p_buf.push_str(": ");
+                p_buf.push_str(val);
+                TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+            if data.top_cpu_procs.len() > MAX_HOVER_TOP_PROCS {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_dim);
+                let mut more_buf = WBuf::<64>::new();
+                more_buf.push_str("... (+");
+                more_buf.push_u32((data.top_cpu_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+                more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+                TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+        }
+    } else if !data.top_cpu_procs.is_empty() {
+        if has_prev_group {
+            cur_y += group_gap;
+        }
+        has_prev_group = true;
+
+        SelectObject(mem_dc, font_title);
+        SetTextColor(mem_dc, text_bright);
+        let top_title = wide!("Top CPU");
+        TextOutW(mem_dc, pad_x, cur_y, top_title.as_ptr(), (top_title.len().saturating_sub(1)) as i32);
+        cur_y += line_h;
+
+        let proc_pad = sub_pad;
+        let display_n = data.top_cpu_procs.len().min(MAX_HOVER_TOP_PROCS);
+        for (name, val) in &data.top_cpu_procs[..display_n] {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_normal);
+            let mut p_buf = WBuf::<128>::new();
+            p_buf.push_str(name);
+            p_buf.push_str(": ");
+            p_buf.push_str(val);
+            TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+        if data.top_cpu_procs.len() > MAX_HOVER_TOP_PROCS {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let mut more_buf = WBuf::<64>::new();
+            more_buf.push_str("... (+");
+            more_buf.push_u32((data.top_cpu_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+            more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+            TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
     }
 
     // 2. RAM
@@ -649,6 +923,105 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
             push_gib_x10(&mut mem_buf, total, data.is_it);
             mem_buf.push_str(" GB");
             TextOutW(mem_dc, sub_pad, cur_y, mem_buf.as_slice().as_ptr(), mem_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+
+        let spark_h = (30.0 * scale) as i32;
+        if !data.ram_sparkline.is_empty() {
+            let spark_rc = RECT { left: sub_pad, top: cur_y, right: w - pad_x, bottom: cur_y + spark_h };
+            unsafe {
+                draw_sparkline(
+                    mem_dc,
+                    &spark_rc,
+                    &data.ram_sparkline,
+                    if is_dark { 0x00DC64B4 } else { 0x00B43C8C },
+                    if is_dark { 0x0037192D } else { 0x00FFE6F5 },
+                    if is_dark { 0x00181818 } else { 0x00EEEEEE },
+                );
+            }
+            cur_y += spark_h + (2.0 * scale) as i32;
+
+            let min = data.ram_sparkline.iter().copied().min().unwrap_or(0);
+            let max = data.ram_sparkline.iter().copied().max().unwrap_or(0);
+            let avg =
+                (data.ram_sparkline.iter().map(|&v| v as u32).sum::<u32>() / data.ram_sparkline.len() as u32) as u8;
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let mut s_buf = WBuf::<64>::new();
+            s_buf.push_str("min: ");
+            s_buf.push_u32(u32::from(min));
+            s_buf.push_str("% · ");
+            s_buf.push_str(if data.is_it { "med: " } else { "avg: " });
+            s_buf.push_u32(u32::from(avg));
+            s_buf.push_str("% · max: ");
+            s_buf.push_u32(u32::from(max));
+            s_buf.push_str("%");
+            TextOutW(mem_dc, sub_pad, cur_y, s_buf.as_slice().as_ptr(), s_buf.as_slice().len() as i32);
+            cur_y += line_h + (2.0 * scale) as i32;
+        }
+
+        if !data.top_ram_procs.is_empty() {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let top_hdr = wide!("Top RAM:");
+            TextOutW(mem_dc, sub_pad, cur_y, top_hdr.as_ptr(), (top_hdr.len().saturating_sub(1)) as i32);
+            cur_y += line_h;
+
+            let proc_pad = sub_pad + (8.0 * scale) as i32;
+            let display_n = data.top_ram_procs.len().min(MAX_HOVER_TOP_PROCS);
+            for (name, val) in &data.top_ram_procs[..display_n] {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_normal);
+                let mut p_buf = WBuf::<128>::new();
+                p_buf.push_str(name);
+                p_buf.push_str(": ");
+                p_buf.push_str(val);
+                TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+            if data.top_ram_procs.len() > MAX_HOVER_TOP_PROCS {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_dim);
+                let mut more_buf = WBuf::<64>::new();
+                more_buf.push_str("... (+");
+                more_buf.push_u32((data.top_ram_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+                more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+                TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+        }
+    } else if !data.top_ram_procs.is_empty() {
+        if has_prev_group {
+            cur_y += group_gap;
+        }
+        has_prev_group = true;
+
+        SelectObject(mem_dc, font_title);
+        SetTextColor(mem_dc, text_bright);
+        let top_title = wide!("Top RAM");
+        TextOutW(mem_dc, pad_x, cur_y, top_title.as_ptr(), (top_title.len().saturating_sub(1)) as i32);
+        cur_y += line_h;
+
+        let proc_pad = sub_pad;
+        let display_n = data.top_ram_procs.len().min(MAX_HOVER_TOP_PROCS);
+        for (name, val) in &data.top_ram_procs[..display_n] {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_normal);
+            let mut p_buf = WBuf::<128>::new();
+            p_buf.push_str(name);
+            p_buf.push_str(": ");
+            p_buf.push_str(val);
+            TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+        if data.top_ram_procs.len() > MAX_HOVER_TOP_PROCS {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let mut more_buf = WBuf::<64>::new();
+            more_buf.push_str("... (+");
+            more_buf.push_u32((data.top_ram_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+            more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+            TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
             cur_y += line_h;
         }
     }
@@ -694,6 +1067,167 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
         }
         TextOutW(mem_dc, sub_pad, cur_y, up_buf.as_slice().as_ptr(), up_buf.as_slice().len() as i32);
         cur_y += line_h;
+
+        let spark_h = (30.0 * scale) as i32;
+        if !data.net_sparkline.is_empty() {
+            let spark_rc = RECT { left: sub_pad, top: cur_y, right: w - pad_x, bottom: cur_y + spark_h };
+            unsafe {
+                draw_sparkline(
+                    mem_dc,
+                    &spark_rc,
+                    &data.net_sparkline,
+                    if is_dark { 0x0028A0F0 } else { 0x001478D2 },
+                    if is_dark { 0x000A283C } else { 0x00DCF0FF },
+                    if is_dark { 0x00181818 } else { 0x00EEEEEE },
+                );
+            }
+            cur_y += spark_h + (2.0 * scale) as i32;
+
+            if let (Some(min_s), Some(avg_s), Some(max_s)) =
+                (&data.net_spark_min, &data.net_spark_avg, &data.net_spark_max)
+            {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_dim);
+                let mut s_buf = WBuf::<128>::new();
+                s_buf.push_str("min: ");
+                s_buf.push_str(min_s);
+                s_buf.push_str(" · ");
+                s_buf.push_str(if data.is_it { "med: " } else { "avg: " });
+                s_buf.push_str(avg_s);
+                s_buf.push_str(" · max: ");
+                s_buf.push_str(max_s);
+                TextOutW(mem_dc, sub_pad, cur_y, s_buf.as_slice().as_ptr(), s_buf.as_slice().len() as i32);
+                cur_y += line_h + (2.0 * scale) as i32;
+            }
+        }
+
+        if !data.top_net_procs.is_empty() {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let top_hdr = wide!("Top I/O Rete:");
+            TextOutW(mem_dc, sub_pad, cur_y, top_hdr.as_ptr(), (top_hdr.len().saturating_sub(1)) as i32);
+            cur_y += line_h;
+
+            let proc_pad = sub_pad + (8.0 * scale) as i32;
+            let display_n = data.top_net_procs.len().min(MAX_HOVER_TOP_PROCS);
+            for (name, val) in &data.top_net_procs[..display_n] {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_normal);
+                let mut p_buf = WBuf::<128>::new();
+                p_buf.push_str(name);
+                p_buf.push_str(": ");
+                p_buf.push_str(val);
+                TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+            if data.top_net_procs.len() > MAX_HOVER_TOP_PROCS {
+                SelectObject(mem_dc, font_body);
+                SetTextColor(mem_dc, text_dim);
+                let mut more_buf = WBuf::<64>::new();
+                more_buf.push_str("... (+");
+                more_buf.push_u32((data.top_net_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+                more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+                TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
+                cur_y += line_h;
+            }
+        }
+    } else if !data.top_net_procs.is_empty() {
+        if has_prev_group {
+            cur_y += group_gap;
+        }
+        has_prev_group = true;
+
+        SelectObject(mem_dc, font_title);
+        SetTextColor(mem_dc, text_bright);
+        let top_title = if data.is_it { wide!("Top I/O Rete") } else { wide!("Top Net I/O") };
+        TextOutW(mem_dc, pad_x, cur_y, top_title.as_ptr(), (top_title.len().saturating_sub(1)) as i32);
+        cur_y += line_h;
+
+        let proc_pad = sub_pad;
+        let display_n = data.top_net_procs.len().min(MAX_HOVER_TOP_PROCS);
+        for (name, val) in &data.top_net_procs[..display_n] {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_normal);
+            let mut p_buf = WBuf::<128>::new();
+            p_buf.push_str(name);
+            p_buf.push_str(": ");
+            p_buf.push_str(val);
+            TextOutW(mem_dc, proc_pad, cur_y, p_buf.as_slice().as_ptr(), p_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+        if data.top_net_procs.len() > MAX_HOVER_TOP_PROCS {
+            SelectObject(mem_dc, font_body);
+            SetTextColor(mem_dc, text_dim);
+            let mut more_buf = WBuf::<64>::new();
+            more_buf.push_str("... (+");
+            more_buf.push_u32((data.top_net_procs.len() - MAX_HOVER_TOP_PROCS) as u32);
+            more_buf.push_str(if data.is_it { " altri)" } else { " more)" });
+            TextOutW(mem_dc, proc_pad, cur_y, more_buf.as_slice().as_ptr(), more_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+    }
+
+    // GPU & VRAM
+    let has_gpu =
+        data.gpu_active && (data.gpu_name.is_some() || data.gpu_3d_pct.is_some() || data.vram_used_mb.is_some());
+    if has_gpu {
+        if has_prev_group {
+            cur_y += group_gap;
+        }
+        has_prev_group = true;
+
+        SelectObject(mem_dc, font_title);
+        SetTextColor(mem_dc, text_bright);
+        let mut gpu_buf = WBuf::<128>::new();
+        gpu_buf.push_str("GPU");
+        if let Some(name) = &data.gpu_name {
+            gpu_buf.push_str(" (");
+            let max_len = 24;
+            let short_name = if name.len() > max_len {
+                let mut end = max_len;
+                while !name.is_char_boundary(end) {
+                    end -= 1;
+                }
+                &name[..end]
+            } else {
+                name.as_str()
+            };
+            gpu_buf.push_str(short_name);
+            gpu_buf.push(b')' as u16);
+        }
+        TextOutW(mem_dc, pad_x, cur_y, gpu_buf.as_slice().as_ptr(), gpu_buf.as_slice().len() as i32);
+        cur_y += line_h;
+
+        SelectObject(mem_dc, font_body);
+        SetTextColor(mem_dc, text_normal);
+
+        if let Some(pct) = data.gpu_3d_pct {
+            let mut load_buf = WBuf::<64>::new();
+            load_buf.push_str("3D Engine: ");
+            load_buf.push_u32(u32::from(pct));
+            buf_push_percent(&mut load_buf);
+            TextOutW(mem_dc, sub_pad, cur_y, load_buf.as_slice().as_ptr(), load_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
+
+        if let (Some(used), Some(total)) = (data.vram_used_mb, data.vram_total_mb) {
+            let mut vram_buf = WBuf::<64>::new();
+            vram_buf.push_str("VRAM: ");
+            let used_x10 = ((used * 10) / 1024) as u32;
+            let total_x10 = ((total * 10) / 1024) as u32;
+            push_gib_x10(&mut vram_buf, used_x10, data.is_it);
+            vram_buf.push_str(" / ");
+            push_gib_x10(&mut vram_buf, total_x10, data.is_it);
+            vram_buf.push_str(" GB");
+            if let Some(div) = (used * 100).checked_div(total) {
+                let pct = div as u32;
+                vram_buf.push_str(" (");
+                vram_buf.push_u32(pct);
+                vram_buf.push_str("%)");
+            }
+            TextOutW(mem_dc, sub_pad, cur_y, vram_buf.as_slice().as_ptr(), vram_buf.as_slice().len() as i32);
+            cur_y += line_h;
+        }
     }
 
     // 4. Temperature
@@ -810,7 +1344,7 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
                 SetTextColor(mem_dc, text_normal);
             }
 
-            let mut d_buf = WBuf::<128>::new();
+            let mut d_buf = WBuf::<256>::new();
             d_buf.push(disk.letter as u16);
             d_buf.push_str(": ");
             d_buf.push_str(&used);
@@ -819,6 +1353,12 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
             d_buf.push_str(if data.is_it { " liberi (" } else { " free (" });
             d_buf.push_u32(u32::from(pct));
             d_buf.push_str("%)");
+
+            d_buf.push_str(" [↓ ");
+            d_buf.push_str(&nextm_metrics::disk::format_disk_speed(disk.read_bps));
+            d_buf.push_str(" ↑ ");
+            d_buf.push_str(&nextm_metrics::disk::format_disk_speed(disk.write_bps));
+            d_buf.push(b']' as u16);
 
             TextOutW(mem_dc, sub_pad, cur_y, d_buf.as_slice().as_ptr(), d_buf.as_slice().len() as i32);
             cur_y += line_h;
@@ -832,6 +1372,71 @@ unsafe fn paint_hover(hwnd: HWND, hdc: HDC, data: &HoverSnapshot) {
     SelectObject(mem_dc, old_bmp);
     DeleteObject(mem_bmp);
     DeleteDC(mem_dc);
+}
+
+unsafe fn draw_sparkline(hdc: HDC, rc: &RECT, data: &[u8], stroke_color: u32, fill_color: u32, bg_color: u32) {
+    if rc.bottom <= rc.top || rc.right <= rc.left || data.is_empty() {
+        return;
+    }
+    let bg_brush = CreateSolidBrush(bg_color);
+    FillRect(hdc, rc, bg_brush);
+    DeleteObject(bg_brush);
+
+    // Linea guida tratteggiata al 50%
+    let mid_y = rc.top + (rc.bottom - rc.top) / 2;
+    let grid_pen = windows_sys::Win32::Graphics::Gdi::CreatePen(
+        windows_sys::Win32::Graphics::Gdi::PS_DOT,
+        1,
+        if bg_color < 0x00808080 { 0x002A2A2A } else { 0x00D0D0D0 },
+    );
+    let old_pen = SelectObject(hdc, grid_pen);
+    windows_sys::Win32::Graphics::Gdi::MoveToEx(hdc, rc.left, mid_y, core::ptr::null_mut());
+    windows_sys::Win32::Graphics::Gdi::LineTo(hdc, rc.right, mid_y);
+    SelectObject(hdc, old_pen);
+    DeleteObject(grid_pen);
+
+    // Bordo sottile del grafico
+    let border_brush = CreateSolidBrush(if bg_color < 0x00808080 { 0x00333333 } else { 0x00CCCCCC });
+    FrameRect(hdc, rc, border_brush);
+    DeleteObject(border_brush);
+
+    let w = (rc.right - rc.left).max(1) as f32;
+    let h = (rc.bottom - rc.top - 2).max(1) as f32;
+    let n = data.len();
+    let step = if n > 1 { w / (n - 1) as f32 } else { w };
+
+    let count = n.min(60);
+    let mut pts = [POINT { x: 0, y: 0 }; 64];
+
+    for (i, &val) in data.iter().take(count).enumerate() {
+        let x = rc.left + (i as f32 * step) as i32;
+        let clamped = (val as f32).clamp(0.0, 100.0);
+        let y = (rc.bottom - 1) - ((clamped / 100.0) * h) as i32;
+        pts[i] = POINT { x, y: y.clamp(rc.top + 1, rc.bottom - 1) };
+    }
+
+    if count >= 2 {
+        let mut poly = [POINT { x: 0, y: 0 }; 66];
+        poly[0] = POINT { x: pts[0].x, y: rc.bottom - 1 };
+        poly[1..=count].copy_from_slice(&pts[..count]);
+        poly[count + 1] = POINT { x: pts[count - 1].x, y: rc.bottom - 1 };
+
+        let fill_brush = CreateSolidBrush(fill_color);
+        let null_pen = windows_sys::Win32::Graphics::Gdi::GetStockObject(windows_sys::Win32::Graphics::Gdi::NULL_PEN);
+        let old_brush = SelectObject(hdc, fill_brush);
+        let old_pen = SelectObject(hdc, null_pen);
+        windows_sys::Win32::Graphics::Gdi::Polygon(hdc, poly.as_ptr(), (count + 2) as i32);
+        SelectObject(hdc, old_brush);
+        SelectObject(hdc, old_pen);
+        DeleteObject(fill_brush);
+    }
+
+    let pen =
+        windows_sys::Win32::Graphics::Gdi::CreatePen(windows_sys::Win32::Graphics::Gdi::PS_SOLID, 1, stroke_color);
+    let old_pen = SelectObject(hdc, pen);
+    windows_sys::Win32::Graphics::Gdi::Polyline(hdc, pts.as_ptr(), count as i32);
+    SelectObject(hdc, old_pen);
+    DeleteObject(pen);
 }
 
 fn buf_push_percent(buf: &mut WBuf<64>) {
@@ -889,5 +1494,22 @@ mod tests {
         let (w_disabled, h_disabled) = calculate_dimensions(&snapshot);
         assert_eq!(w_disabled, w_no_disks);
         assert_eq!(h_disabled, h_no_disks);
+    }
+
+    #[test]
+    fn calculate_dimensions_includes_top_cpu_and_ram_procs() {
+        let mut snapshot = HoverSnapshot::default();
+        let (w_base, h_base) = calculate_dimensions(&snapshot);
+
+        snapshot.top_cpu_procs =
+            vec![("chrome.exe (5)".into(), "15,2%".into()), ("rust-analyzer.exe".into(), "8,4%".into())];
+        let (w_cpu, h_cpu) = calculate_dimensions(&snapshot);
+        assert!(w_cpu >= w_base);
+        assert!(h_cpu > h_base);
+
+        snapshot.top_ram_procs =
+            vec![("chrome.exe (5)".into(), "2,4 GB".into()), ("rust-analyzer.exe".into(), "1,2 GB".into())];
+        let (_w_both, h_both) = calculate_dimensions(&snapshot);
+        assert!(h_both > h_cpu);
     }
 }

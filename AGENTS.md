@@ -18,7 +18,7 @@ Il progetto vive su due repository Git locali con ruoli distinti:
 ### Repository Pubblico / GitHub (Release Pubblica)
 - **Percorso locale:** `C:\Users\loren\Documents\_home\personal\git\rust\public\nextm`
 - **Remote `origin`:** `https://github.com/lorenzopompili/nextm.git`
-- **Permessi agente:** L'agente AI **non ha credenziali interattive** su GitHub e non deve eseguire comandi `git push` che attendono autenticazione. L'agente deve copiare i dati, verificare la compilazione/test, committare, allineare i branch `develop` e `main`, creare il tag annotato, e infine fornire all'utente il comando per il push manuale.
+- **Permessi agente:** L'agente AI dispone di credenziali GitHub configurate tramite GitHub CLI (`gh auth setup-git`, utente `lorenzopompili`). L'agente può eseguire direttamente `git push origin develop main --tags` dal repository `public/nextm`.
 - **Particolarità file README:** Nel repository GitHub, il file `README.md` alla radice deve essere la versione in lingua **inglese** (derivata da `README_GITHUB.md` del repository primario).
 
 ---
@@ -156,9 +156,10 @@ Quando l'utente richiede di rilasciare una nuova versione `vX.Y.Z`:
    git -C $dst tag -a vX.Y.Z -m "Release vX.Y.Z - release notes"
    ```
 
-### Fase E — Istruzioni per l'Utente
-Avvisare sempre l'utente che entrambi i repository sono allineati, GitLab è già aggiornato, e fornire all'utente il comando per completare il push su GitHub dal suo terminale:
-```powershell
-cd C:\Users\loren\Documents\_home\personal\git\rust\public\nextm
-git push origin develop main --tags
-```
+### Fase E — Push su GitHub (`public/nextm`) e Notifica Utente
+1. **Push su GitHub tramite `gh` CLI:**
+   ```powershell
+   git -C $dst push origin develop main --tags
+   ```
+2. **Notifica per l'utente:**
+   Avvisare l'utente che entrambi i repository (GitLab e GitHub) sono stati allineati, compilati, testati, taggati e pushati con successo.

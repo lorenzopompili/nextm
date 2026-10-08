@@ -58,7 +58,7 @@ fn main() {
             sys::disable_ime();
             sys::single::request_quit();
             let instance = sys::single::acquire_with_retry(core::time::Duration::from_millis(5000));
-            let code = app::run_with_inspect(true);
+            let code = app::run();
             drop(instance);
             std::process::exit(code);
         }

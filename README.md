@@ -112,7 +112,7 @@ Cleanly structured into customizable visual cards:
 nextm is distributed in two formats:
 
 ### Option A: Modern Windows Installer (Recommended)
-Download `nextm-setup-v0.1.4.exe`:
+Download `nextm-setup-v0.1.5.exe`:
 - **Bilingual Setup:** Select between **English** and **Italiano** at launch.
 - **No UAC Required:** Installs cleanly to `%LOCALAPPDATA%\Programs\nextm`.
 - Creates Start Menu and optional Desktop shortcuts.
@@ -120,7 +120,7 @@ Download `nextm-setup-v0.1.4.exe`:
 - **100% Clean Uninstaller:** Integrated into *Windows Settings › Installed Apps*. Safely terminates running instances, deletes scheduled tasks, cleans application binaries, and purges all user registry keys (`HKCU\Software\nextm`).
 
 ### Option B: Self-Contained Portable Edition
-Download `nextm.exe` or `nextm-v0.1.4-windows-x64-portable.zip`:
+Download `nextm.exe` or `nextm-v0.1.5-windows-x64-portable.zip`:
 - A single, self-contained binary with zero installers and zero prerequisites.
 - Run `nextm.exe` from any directory, desktop, or USB thumb drive.
 - Create an empty **`nextm.ini`** file in the same folder to activate **Pure Portable Mode**: nextm will store all settings locally without writing to the Windows Registry.

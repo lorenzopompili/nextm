@@ -367,15 +367,6 @@ pub struct App {
 
 /// Avvia nextm sul thread corrente; restituisce il codice di uscita.
 pub fn run() -> i32 {
-    run_internal(false)
-}
-
-/// Avvia nextm sul thread corrente aprendo immediatamente la finestra di ispezione.
-pub fn run_with_inspect(show_inspect: bool) -> i32 {
-    run_internal(show_inspect)
-}
-
-fn run_internal(show_inspect: bool) -> i32 {
     let msg_taskbar = window::register_message(wide!("TaskbarCreated"));
     let msg_activate = window::register_message(ACTIVATE_MESSAGE);
     let msg_exit = window::register_message(EXIT_MESSAGE);
@@ -389,9 +380,6 @@ fn run_internal(show_inspect: bool) -> i32 {
     let app = App::new(hwnd);
     APP.with(|cell| *cell.borrow_mut() = Some(app));
     with_app(App::start);
-    if show_inspect {
-        with_app(App::show_inspect);
-    }
     window::run_message_loop()
 }
 
@@ -665,7 +653,9 @@ impl App {
     }
 
     fn start(&mut self) {
-        if self.settings.is_very_first_run() && !self.store.is_portable() && !self.exe.is_empty() {
+        if crate::sys::elevation::is_task_scheduler_enabled() {
+            autostart::disable();
+        } else if self.settings.is_very_first_run() && !self.store.is_portable() && !self.exe.is_empty() {
             autostart::enable(&self.exe);
         }
         if self.settings.ecoqos {
@@ -1832,7 +1822,6 @@ impl App {
         self.drawn_temp_disk = None;
         self.sync_tray_icons();
         self.tick();
-        self.show_inspect();
     }
 
     fn on_taskbar_created(&mut self) {

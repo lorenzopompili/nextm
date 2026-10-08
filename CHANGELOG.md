@@ -5,6 +5,14 @@ Tutte le modifiche rilevanti di nextm sono annotate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto usa il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [0.1.5] - 2026-10-09
+
+### Corretto
+- **Avvio Esclusivo in Tray Icon (Silenzioso al Riavvio)**: risolto il problema per cui al riavvio del PC o a fronte di attivazioni esterne compariva inaspettatamente la finestra di ispezione a schermo come se si fosse cliccato sull'eseguibile.
+- **Rimozione Apertura Finestra su `MSG_ACTIVATE`**: la ricezione del messaggio di istanza singola ri-sincronizza e aggiorna unicamente le icone nell'area di notifica (system tray), senza mai invocare `show_inspect()`. L'apertura della finestra di ispezione avviene esclusivamente su interazione diretta dell'utente sulle icone nella barra delle applicazioni (click, doppio click o menu).
+- **Deduplicazione Configurazione Autostart**: se l'avvio come amministratore con Utilità di Pianificazione (`schtasks`) è attivo, all'avvio dell'applicazione viene rimossa automaticamente l'eventuale chiave ridondante `Run` in `HKCU`, prevenendo lanci concorrenti duplicati al logon di Windows.
+- **Avvio Amministratore Silenzioso**: il riavvio elevato (`--admin-restart`) parte direttamente e unicamente nell'area di notifica di Windows.
+
 ## [0.1.4] - 2026-10-06
 
 ### Corretto

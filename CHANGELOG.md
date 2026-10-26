@@ -5,6 +5,16 @@ Tutte le modifiche rilevanti di nextm sono annotate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto usa il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [0.1.6] - 2026-10-26
+
+### Corretto
+- **Visualizzazione su Schermi Notebook High-DPI**: risolto il problema di rendering per cui aprendo la finestra di ispezione su display ad alta densità di pixel (scaling 125%, 150%, 175%, 200%) la finestra appariva minuscola, stretta e con elementi disallineati. La finestra è ora pienamente DPI-aware per-monitor v2: si apre e si centra con dimensioni logiche proporzionate al monitor attivo (`~1040x700` px scalati).
+- **Riorganizzazione Automatica del Layout su Ridimensionamento**: le tabelle dei processi, dei socket e dei servizi ridistribuiscono ora dinamicamente e proporzionalmente lo spazio extra disponibile quando la finestra viene allargata dall'utente. La colonna "Nome processo" e la colonna "Associazioni" assorbono la quota maggiore della larghezza extra senza troncare testi o lasciare spazi vuoti a destra.
+- **Doppio Clic sull'Header per Reset Layout**: implementato il ripristino istantaneo delle larghezze ottimali delle colonne con un doppio clic su qualsiasi separatore dell'header.
+- **Dimensioni Minime di Tracking (`WM_GETMINMAXINFO`)**: aggiunto il gestore di sistema per impedire il restringimento della finestra al di sotto di una dimensione confortevole (`780x480` px logici scalati al DPI).
+- **Hit-Testing e Layout Reattivo delle Impostazioni**: introdotta la struttura unificata `SettingsLayout` che sincronizza al pixel il disegno delle tre card e il click del mouse su toggle e stepper su qualsiasi risoluzione, dimensione finestra e fattore di scala DPI.
+- **Layout Reattivo e Spaziatura DPI della Scheda Info / About**: eliminata la compressione e la sovrapposizione visiva dei testi e delle card informative sui notebook ad alto DPI grazie alla nuova struttura `InfoLayout`. La sezione hero (icona scalata, titolo, sottotitolo, autore con link, repo GitHub e badge permessi), il controllo aggiornamenti e le tre card informative (Stato Sistema, Sicurezza & Kernel, Comandi Rapidi) calcolano ora spaziature, altezze e interlinee proporzionali al DPI e all'altezza della finestra, con cursori a manina (`IDC_HAND`) e hit-testing immediato per tutti i link.
+
 ## [0.1.5] - 2026-10-09
 
 ### Corretto

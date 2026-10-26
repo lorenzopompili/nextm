@@ -633,7 +633,7 @@ impl App {
             gpu_metrics_sampler: None,
             gpu_stats: None,
             last_gpu_metrics_tick: 0,
-            inspect_win: InspectWindow::new(s),
+            inspect_win: InspectWindow::new(s, dpi),
             last_inspect_toggle: 0,
             tip_sent: TipBuf::new(),
             hover_until: 0,

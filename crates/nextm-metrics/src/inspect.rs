@@ -254,6 +254,61 @@ pub struct ProcessRecord {
     pub io_write_bytes: u64,
 }
 
+/// Origine di una voce di avvio automatico Windows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum StartupSource {
+    HkcuRun,
+    HkcuRun32,
+    HklmRun,
+    HklmRun32,
+    UserStartupFolder,
+    CommonStartupFolder,
+    StoreApp,
+}
+
+/// Stato di abilitazione di una voce di avvio automatico.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartupState {
+    Enabled,
+    Disabled,
+    DisabledByPolicy,
+    EnabledByPolicy,
+}
+
+impl StartupState {
+    /// Vero se l'elemento risulta attualmente abilitato all'avvio.
+    pub fn is_enabled(self) -> bool {
+        matches!(self, Self::Enabled | Self::EnabledByPolicy)
+    }
+
+    /// Vero se lo stato è controllato da criteri di gruppo/sistema (non modificabile dall'utente).
+    pub fn is_policy(self) -> bool {
+        matches!(self, Self::DisabledByPolicy | Self::EnabledByPolicy)
+    }
+}
+
+/// Esito dell'operazione di abilitazione o disabilitazione di un elemento all'avvio.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartupToggleOutcome {
+    Ok,
+    AccessDenied,
+    PolicyLocked,
+    Failed,
+}
+
+/// Informazioni su un'applicazione configurata per l'avvio automatico con Windows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartupEntry {
+    pub name: String,
+    pub publisher: String,
+    pub state: StartupState,
+    pub source: StartupSource,
+    pub command: String,
+    pub target_path: Option<String>,
+    pub raw_key: String,
+    pub requires_admin: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

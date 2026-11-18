@@ -5,6 +5,14 @@ Tutte le modifiche rilevanti di nextm sono annotate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e il progetto usa il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [0.1.7] - 2026-11-18
+
+### Aggiunto
+- **Nuova Scheda App di avvio (`Startup Apps`)**: aggiunta nella Finestra Unificata di Ispezione la scheda dedicata alla gestione delle applicazioni all'avvio di Windows, posizionata tra *Servizi Windows* e *Impostazioni* (`6` schede totali, supporto IT/EN completo).
+- **Scansione Completa Fonti di Avvio Windows 11**: rilevamento delle voci configurate in `HKCU\Run`, `HKLM\Run` (viste Registro 64-bit e 32-bit WOW64), cartelle *Esecuzione automatica* utente e comune (inclusa la risoluzione dei collegamenti `.lnk` MS-SHLLINK in puro Rust) e task di avvio delle app Store / MSIX (`SystemAppData` + `AppxManifest.xml` con risoluzione delle stringhe `ms-resource:` tramite `shlwapi.dll` caricata dinamicamente).
+- **Risoluzione Metadati e Stato `StartupApproved`**: estrazione dinamica di descrizione/autore tramite `version.dll` e lettura/scrittura dello stato di abilitazione nel formato binario a 12 byte `StartupApproved` (incluso timestamp `FILETIME`) e `DWORD State` per pacchetti Store, riconoscendo le policy di sistema (`EnabledByPolicy` / `DisabledByPolicy`).
+- **Azioni Dirette e Navigazione**: filtro testuale in tempo reale, ordinamento su tutte e 5 le colonne (*Nome*, *Autore*, *Origine*, *Stato*, *Comando*), persistenza della selezione per identità logica della voce, pulsanti e menu contestuale con **Abilita / Disabilita** (anche da `Barra spaziatrice`), **Apri percorso file** (anche su doppio clic) e **Copia comando**, mantenendo invariate le 15 DLL statiche di sistema e il budget binario.
+
 ## [0.1.6] - 2026-10-26
 
 ### Corretto

@@ -2,10 +2,11 @@
 
 use std::collections::BTreeMap;
 
-use crate::inspect::{ProcessRecord, ServiceInfo, SocketInfo};
+use crate::inspect::{ProcessRecord, ServiceInfo, SocketInfo, StartupEntry, StartupToggleOutcome};
 use crate::sys::processes::ProcessScanner;
 use crate::sys::services::ServiceScanner;
 use crate::sys::sockets::SocketScanner;
+use crate::sys::startup::StartupScanner;
 
 /// Processo unificato con relativi servizi ospitati e porte/connessioni di rete attive.
 #[derive(Debug, Clone)]
@@ -171,6 +172,16 @@ impl InspectEngine {
     /// Chiude una connessione TCP IPv4 attiva.
     pub fn close_tcp_v4(&self, local_ip: [u8; 4], local_port: u16, remote_ip: [u8; 4], remote_port: u16) -> bool {
         self.socket_scanner.as_ref().is_some_and(|s| s.close_tcp_v4(local_ip, local_port, remote_ip, remote_port))
+    }
+
+    /// Esegue la scansione delle applicazioni configurate per l'avvio con Windows.
+    pub fn scan_startup(&self, out: &mut Vec<StartupEntry>) {
+        StartupScanner::new().scan(out);
+    }
+
+    /// Abilita o disabilita l'avvio automatico per una voce di avvio.
+    pub fn set_startup_enabled(&self, entry: &StartupEntry, enabled: bool) -> StartupToggleOutcome {
+        StartupScanner::new().set_enabled(entry, enabled)
     }
 
     /// Rilascia tutta la memoria allocata e i buffer del motore.

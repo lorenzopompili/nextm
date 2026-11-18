@@ -6,6 +6,8 @@
 //! 2. Vista Connessioni di Rete (TCPView) con porte locali/remote, protocolli e stati TCP/UDP,
 //!    e chiusura forzata connessioni.
 //! 3. Vista Servizi Windows con stato, avvio/arresto e correlazione al processo host (svchost).
+//! 4. Vista App di avvio con lettura da Registro (`Run`), Cartelle di avvio e App Store/MSIX,
+//!    abilitazione/disabilitazione compatibile con Gestione attività e apertura percorso file.
 //!
 //! Nessuna dipendenza runtime esterna, zero driver, DWM dark mode, doppio buffer GDI senza sfarfallio.
 
@@ -47,7 +49,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::strings::Strings;
-use nextm_metrics::inspect::{IpAddrKind, ServiceState, SocketProtocol, TcpState};
+use nextm_metrics::inspect::{
+    IpAddrKind, ServiceState, SocketProtocol, StartupEntry, StartupSource, StartupState, StartupToggleOutcome, TcpState,
+};
 use nextm_metrics::sys::inspect_engine::InspectEngine;
 
 #[inline]
@@ -110,6 +114,7 @@ pub enum InspectTab {
     Processes,
     Sockets,
     Services,
+    Startup,
     Settings,
     Info,
 }
@@ -154,6 +159,13 @@ struct ServiceRow {
     is_running: bool,
     pid: u32,
     proc_name: String,
+}
+
+#[derive(Clone, Debug)]
+struct StartupRow {
+    entry: StartupEntry,
+    state_str: String,
+    source_str: String,
 }
 
 #[derive(Clone, Debug)]
@@ -206,6 +218,7 @@ enum SelectedKey {
     SocketGroup(String),
     SocketEntry { pid: u32, proto: String, local_addr: String, remote_addr: String },
     Service(String),
+    StartupApp { source: StartupSource, raw_key: String },
 }
 
 struct InspectFonts {
@@ -301,6 +314,8 @@ struct InspectState {
     expanded_socket_groups: BTreeSet<String>,
     services: Vec<ServiceRow>,
     filtered_services: Vec<usize>,
+    startup_apps: Vec<StartupRow>,
+    filtered_startup: Vec<usize>,
     hung_windows: Vec<crate::sys::hung::HungWindow>,
     hung_kill_rect: Option<(RECT, u32)>,
     proc_mem_history: BTreeMap<u32, Vec<u64>>,
@@ -320,10 +335,11 @@ struct InspectState {
     col_widths_procs: [i32; 6],
     col_widths_sockets: [i32; 5],
     col_widths_services: [i32; 4],
+    col_widths_startup: [i32; 4],
     hover_col_sep: Option<usize>,
     resizing_col: Option<(usize, i32, i32)>,
 
-    tab_rects: [RECT; 5],
+    tab_rects: [RECT; 6],
     group_btn_rect: RECT,
     bottom_btn_rects: [RECT; 3],
 
@@ -404,6 +420,10 @@ impl InspectState {
         self.services.shrink_to_fit();
         self.filtered_services.clear();
         self.filtered_services.shrink_to_fit();
+        self.startup_apps.clear();
+        self.startup_apps.shrink_to_fit();
+        self.filtered_startup.clear();
+        self.filtered_startup.shrink_to_fit();
         self.hung_windows.clear();
         self.hung_windows.shrink_to_fit();
         self.proc_mem_history.clear();
@@ -562,6 +582,102 @@ impl InspectState {
         self.clamp_scroll();
     }
 
+    fn reload_startup(&mut self) {
+        let mut raw = Vec::new();
+        self.engine.scan_startup(&mut raw);
+        let is_it = self.is_italian();
+        self.startup_apps.clear();
+        for entry in raw {
+            let state_str = match entry.state {
+                StartupState::Enabled => {
+                    if is_it {
+                        "● Abilitato"
+                    } else {
+                        "● Enabled"
+                    }
+                }
+                StartupState::Disabled => {
+                    if is_it {
+                        "○ Disabilitato"
+                    } else {
+                        "○ Disabled"
+                    }
+                }
+                StartupState::EnabledByPolicy => {
+                    if is_it {
+                        "🔒 Abilitato (criterio)"
+                    } else {
+                        "🔒 Enabled (policy)"
+                    }
+                }
+                StartupState::DisabledByPolicy => {
+                    if is_it {
+                        "🔒 Disabilitato (criterio)"
+                    } else {
+                        "🔒 Disabled (policy)"
+                    }
+                }
+            }
+            .to_string();
+            let source_str = match entry.source {
+                StartupSource::HkcuRun => {
+                    if is_it {
+                        "Registro (Utente)"
+                    } else {
+                        "Registry (User)"
+                    }
+                }
+                StartupSource::HkcuRun32 => {
+                    if is_it {
+                        "Registro 32-bit (Utente)"
+                    } else {
+                        "Registry 32-bit (User)"
+                    }
+                }
+                StartupSource::HklmRun => {
+                    if is_it {
+                        "Registro (Sistema)"
+                    } else {
+                        "Registry (Machine)"
+                    }
+                }
+                StartupSource::HklmRun32 => {
+                    if is_it {
+                        "Registro 32-bit (Sistema)"
+                    } else {
+                        "Registry 32-bit (Machine)"
+                    }
+                }
+                StartupSource::UserStartupFolder => {
+                    if is_it {
+                        "Cartella Avvio (Utente)"
+                    } else {
+                        "Startup Folder (User)"
+                    }
+                }
+                StartupSource::CommonStartupFolder => {
+                    if is_it {
+                        "Cartella Avvio (Tutti)"
+                    } else {
+                        "Startup Folder (All Users)"
+                    }
+                }
+                StartupSource::StoreApp => {
+                    if is_it {
+                        "App Store (MSIX)"
+                    } else {
+                        "Store App (MSIX)"
+                    }
+                }
+            }
+            .to_string();
+            self.startup_apps.push(StartupRow { entry, state_str, source_str });
+        }
+        self.apply_sorting();
+        self.apply_filter();
+        self.clamp_scroll();
+    }
+
     fn apply_sorting(&mut self) {
         let asc = self.sort_asc;
         match self.active_tab {
@@ -634,6 +750,17 @@ impl InspectState {
                 3 => self.services.sort_by(|a, b| if asc { a.pid.cmp(&b.pid) } else { b.pid.cmp(&a.pid) }),
                 _ => {}
             },
+            InspectTab::Startup => self.startup_apps.sort_by(|a, b| {
+                let ord = match self.sort_col {
+                    1 => cmp_ignore_ascii_case(&a.entry.publisher, &b.entry.publisher),
+                    2 => b.entry.state.is_enabled().cmp(&a.entry.state.is_enabled()),
+                    3 => cmp_ignore_ascii_case(&a.source_str, &b.source_str),
+                    4 => cmp_ignore_ascii_case(&a.entry.command, &b.entry.command),
+                    _ => cmp_ignore_ascii_case(&a.entry.name, &b.entry.name),
+                };
+                let directed = if asc { ord } else { ord.reverse() };
+                directed.then_with(|| cmp_ignore_ascii_case(&a.entry.name, &b.entry.name))
+            }),
             InspectTab::Info | InspectTab::Settings => {}
         }
     }
@@ -1005,6 +1132,27 @@ impl InspectState {
                     .map(|(i, _)| i)
                     .collect();
             }
+            InspectTab::Startup => {
+                let query = self.filter_text.trim().to_lowercase();
+                self.filtered_startup = self
+                    .startup_apps
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, item)| {
+                        if query.is_empty() {
+                            true
+                        } else {
+                            contains_ignore_ascii_case(&item.entry.name, &query)
+                                || contains_ignore_ascii_case(&item.entry.publisher, &query)
+                                || contains_ignore_ascii_case(&item.state_str, &query)
+                                || contains_ignore_ascii_case(&item.source_str, &query)
+                                || contains_ignore_ascii_case(&item.entry.command, &query)
+                                || contains_ignore_ascii_case(&item.entry.raw_key, &query)
+                        }
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+            }
             InspectTab::Info | InspectTab::Settings => {}
         }
         self.restore_selection_index();
@@ -1016,6 +1164,7 @@ impl InspectState {
             InspectTab::Processes => self.proc_items.len(),
             InspectTab::Sockets => self.socket_items.len(),
             InspectTab::Services => self.filtered_services.len(),
+            InspectTab::Startup => self.filtered_startup.len(),
             InspectTab::Info | InspectTab::Settings => 0,
         }
     }
@@ -1262,6 +1411,94 @@ impl InspectState {
         self.services.get(svc_idx)
     }
 
+    fn selected_startup(&self) -> Option<&StartupRow> {
+        let sel = self.selected_index?;
+        let &idx = self.filtered_startup.get(sel)?;
+        self.startup_apps.get(idx)
+    }
+
+    fn toggle_selected_startup(&mut self) {
+        if self.active_tab != InspectTab::Startup {
+            return;
+        }
+        let Some(row) = self.selected_startup().cloned() else { return };
+        let is_it = self.is_italian();
+        let target_enabled = !row.entry.state.is_enabled();
+        let outcome = self.engine.set_startup_enabled(&row.entry, target_enabled);
+        match outcome {
+            StartupToggleOutcome::Ok => {
+                let verb = if target_enabled {
+                    if is_it { "Avvio abilitato" } else { "Startup enabled" }
+                } else if is_it {
+                    "Avvio disabilitato"
+                } else {
+                    "Startup disabled"
+                };
+                self.set_status(format!("{verb}: {}", row.entry.name));
+                self.reload_startup();
+            }
+            StartupToggleOutcome::AccessDenied => {
+                self.set_status(if is_it {
+                    "Richiede privilegi Amministratore per modificare voci di sistema".to_string()
+                } else {
+                    "Requires Administrator privileges to modify system startup entries".to_string()
+                });
+            }
+            StartupToggleOutcome::PolicyLocked => {
+                self.set_status(if is_it {
+                    "Elemento controllato dai criteri di sistema".to_string()
+                } else {
+                    "Entry controlled by system policy".to_string()
+                });
+            }
+            StartupToggleOutcome::Failed => {
+                self.set_status(if is_it {
+                    format!("Impossibile modificare avvio: {}", row.entry.name)
+                } else {
+                    format!("Failed to update startup: {}", row.entry.name)
+                });
+            }
+        }
+    }
+
+    fn open_selected_startup_location(&mut self) {
+        if self.active_tab != InspectTab::Startup {
+            return;
+        }
+        let Some(row) = self.selected_startup() else { return };
+        let is_it = self.is_italian();
+        if let Some(ref target) = row.entry.target_path {
+            let p = std::path::Path::new(target);
+            if p.is_file() {
+                let _ = std::process::Command::new("explorer.exe").arg(format!("/select,\"{target}\"")).spawn();
+                return;
+            } else if p.is_dir() {
+                let wide: Vec<u16> = target.encode_utf16().chain(core::iter::once(0)).collect();
+                crate::sys::shell::open_with_explorer(&wide);
+                return;
+            }
+        }
+        self.set_status(if is_it {
+            "Percorso file non trovato su disco".to_string()
+        } else {
+            "File path not found on disk".to_string()
+        });
+    }
+
+    fn copy_selected_startup_command(&mut self, hwnd: HWND) {
+        if self.active_tab != InspectTab::Startup {
+            return;
+        }
+        let Some(row) = self.selected_startup().cloned() else { return };
+        let is_it = self.is_italian();
+        copy_to_clipboard(hwnd, &row.entry.command);
+        self.set_status(if is_it {
+            format!("Comando copiato: {}", row.entry.name)
+        } else {
+            format!("Command copied: {}", row.entry.name)
+        });
+    }
+
     fn key_for_row(&self, idx: usize) -> Option<SelectedKey> {
         match self.active_tab {
             InspectTab::Processes => {
@@ -1290,6 +1527,12 @@ impl InspectState {
             InspectTab::Services => {
                 let &svc_idx = self.filtered_services.get(idx)?;
                 self.services.get(svc_idx).map(|s| SelectedKey::Service(s.name.clone()))
+            }
+            InspectTab::Startup => {
+                let &s_idx = self.filtered_startup.get(idx)?;
+                self.startup_apps
+                    .get(s_idx)
+                    .map(|r| SelectedKey::StartupApp { source: r.entry.source, raw_key: r.entry.raw_key.clone() })
             }
             InspectTab::Info | InspectTab::Settings => None,
         }
@@ -1397,6 +1640,26 @@ impl InspectState {
                     self.selected_key = None;
                 }
             },
+            InspectTab::Startup => match key {
+                SelectedKey::StartupApp { source, raw_key } => {
+                    let found = self.filtered_startup.iter().position(|&idx| {
+                        self.startup_apps
+                            .get(idx)
+                            .map(|r| r.entry.source == *source && r.entry.raw_key.eq_ignore_ascii_case(raw_key))
+                            .unwrap_or(false)
+                    });
+                    if let Some(i) = found {
+                        self.selected_index = Some(i);
+                    } else {
+                        self.selected_index = None;
+                        self.selected_key = None;
+                    }
+                }
+                _ => {
+                    self.selected_index = None;
+                    self.selected_key = None;
+                }
+            },
             InspectTab::Info | InspectTab::Settings => {
                 self.selected_index = None;
                 self.selected_key = None;
@@ -1421,9 +1684,13 @@ impl InspectState {
         self.sort_asc = tab != InspectTab::Processes;
         self.scroll_y = 0;
         self.set_selected_index(None);
-        self.apply_sorting();
-        self.apply_filter();
-        self.clamp_scroll();
+        if tab == InspectTab::Startup {
+            self.reload_startup();
+        } else {
+            self.apply_sorting();
+            self.apply_filter();
+            self.clamp_scroll();
+        }
     }
 
     fn client_dimensions(&self) -> (i32, i32) {
@@ -1452,6 +1719,7 @@ impl InspectState {
             InspectTab::Processes => &mut self.col_widths_procs,
             InspectTab::Sockets => &mut self.col_widths_sockets,
             InspectTab::Services => &mut self.col_widths_services,
+            InspectTab::Startup => &mut self.col_widths_startup,
             InspectTab::Info | InspectTab::Settings => &mut [],
         }
     }
@@ -1547,6 +1815,32 @@ impl InspectState {
                 }
                 bounds
             }
+            InspectTab::Startup => {
+                let base_widths = [
+                    self.scale(self.col_widths_startup[0]),
+                    self.scale(self.col_widths_startup[1]),
+                    self.scale(self.col_widths_startup[2]),
+                    self.scale(self.col_widths_startup[3]),
+                    self.scale(220),
+                ];
+                let base_sum: i32 = base_widths.iter().sum();
+                let extra = (avail - base_sum).max(0);
+
+                let w0 = base_widths[0] + (extra * 30) / 100;
+                let w1 = base_widths[1] + (extra * 20) / 100;
+                let w2 = base_widths[2];
+                let w3 = base_widths[3];
+                let w4 = (avail - (w0 + w1 + w2 + w3)).max(self.scale(180));
+
+                let widths = [w0, w1, w2, w3, w4];
+                let mut bounds = Vec::with_capacity(5);
+                let mut cur = start_x;
+                for &w in &widths {
+                    bounds.push((cur, cur + w));
+                    cur += w;
+                }
+                bounds
+            }
             InspectTab::Info | InspectTab::Settings => Vec::new(),
         }
     }
@@ -1608,7 +1902,7 @@ impl InspectWindow {
             let work_w = (work_area.right - work_area.left).max(800);
             let work_h = (work_area.bottom - work_area.top).max(600);
 
-            let win_w = ((1040 * dpi as i32) / 96).clamp(840, (work_w - 40).max(600));
+            let win_w = ((1100 * dpi as i32) / 96).clamp(880, (work_w - 40).max(600));
             let win_h = ((700 * dpi as i32) / 96).clamp(560, (work_h - 40).max(450));
             let win_x = work_area.left + (work_w - win_w) / 2;
             let win_y = work_area.top + (work_h - win_h) / 2;
@@ -1683,6 +1977,8 @@ impl InspectWindow {
                 expanded_socket_groups: BTreeSet::new(),
                 services: Vec::new(),
                 filtered_services: Vec::new(),
+                startup_apps: Vec::new(),
+                filtered_startup: Vec::new(),
                 hung_windows: Vec::new(),
                 hung_kill_rect: None,
                 proc_mem_history: BTreeMap::new(),
@@ -1701,9 +1997,10 @@ impl InspectWindow {
                 col_widths_procs: [220, 80, 80, 110, 110, 70],
                 col_widths_sockets: [200, 70, 60, 180, 180],
                 col_widths_services: [200, 280, 120, 100],
+                col_widths_startup: [230, 180, 115, 145],
                 hover_col_sep: None,
                 resizing_col: None,
-                tab_rects: [zeroed(); 5],
+                tab_rects: [zeroed(); 6],
                 group_btn_rect: zeroed(),
                 bottom_btn_rects: [zeroed(); 3],
                 is_dragging_scrollbar: false,
@@ -1744,6 +2041,9 @@ impl InspectWindow {
             if let Some(st) = cell.borrow_mut().as_mut() {
                 st.is_dark = is_dark;
                 st.reload_data();
+                if st.active_tab == InspectTab::Startup {
+                    st.reload_startup();
+                }
             }
         });
 
@@ -1758,7 +2058,7 @@ impl InspectWindow {
             SystemParametersInfoW(SPI_GETWORKAREA, 0, &mut work_area as *mut _ as _, 0);
             let work_w = (work_area.right - work_area.left).max(800);
             let work_h = (work_area.bottom - work_area.top).max(600);
-            let min_w = ((960 * dpi as i32) / 96).min(work_w - 40);
+            let min_w = ((980 * dpi as i32) / 96).min(work_w - 40);
             let min_h = ((640 * dpi as i32) / 96).min(work_h - 40);
 
             let is_offscreen = wr.right <= work_area.left
@@ -1767,7 +2067,7 @@ impl InspectWindow {
                 || wr.top >= work_area.bottom;
 
             if cur_w < min_w || cur_h < min_h || is_offscreen {
-                let target_w = ((1040 * dpi as i32) / 96).clamp(840, (work_w - 40).max(600));
+                let target_w = ((1100 * dpi as i32) / 96).clamp(880, (work_w - 40).max(600));
                 let target_h = ((700 * dpi as i32) / 96).clamp(560, (work_h - 40).max(450));
                 let win_x = work_area.left + (work_w - target_w) / 2;
                 let win_y = work_area.top + (work_h - target_h) / 2;
@@ -1805,7 +2105,7 @@ impl InspectWindow {
             SystemParametersInfoW(SPI_GETWORKAREA, 0, &mut work_area as *mut _ as _, 0);
             let work_w = (work_area.right - work_area.left).max(800);
             let work_h = (work_area.bottom - work_area.top).max(600);
-            let min_w = ((960 * dpi as i32) / 96).min(work_w - 40);
+            let min_w = ((980 * dpi as i32) / 96).min(work_w - 40);
             let min_h = ((640 * dpi as i32) / 96).min(work_h - 40);
 
             let is_offscreen = wr.right <= work_area.left
@@ -1814,7 +2114,7 @@ impl InspectWindow {
                 || wr.top >= work_area.bottom;
 
             if cur_w < min_w || cur_h < min_h || is_offscreen {
-                let target_w = ((1040 * dpi as i32) / 96).clamp(840, (work_w - 40).max(600));
+                let target_w = ((1100 * dpi as i32) / 96).clamp(880, (work_w - 40).max(600));
                 let target_h = ((700 * dpi as i32) / 96).clamp(560, (work_h - 40).max(450));
                 let win_x = work_area.left + (work_w - target_w) / 2;
                 let win_y = work_area.top + (work_h - target_h) / 2;
@@ -1859,6 +2159,9 @@ impl InspectWindow {
             if let Some(st) = cell.borrow_mut().as_mut() {
                 st.s = s;
                 st.reload_data();
+                if st.active_tab == InspectTab::Startup {
+                    st.reload_startup();
+                }
                 search_edit = st.search_edit;
             }
         });
@@ -1974,7 +2277,7 @@ unsafe extern "system" fn inspect_wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, 
         WM_GETMINMAXINFO => {
             let mmi = unsafe { &mut *(lparam as *mut MINMAXINFO) };
             let dpi = crate::sys::shell::dpi_of(hwnd).max(96);
-            mmi.ptMinTrackSize.x = ((780 * dpi as i32) / 96).max(640);
+            mmi.ptMinTrackSize.x = ((880 * dpi as i32) / 96).max(740);
             mmi.ptMinTrackSize.y = ((480 * dpi as i32) / 96).max(400);
             0
         }
@@ -2257,8 +2560,9 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
                         0 => st.set_active_tab(InspectTab::Processes),
                         1 => st.set_active_tab(InspectTab::Sockets),
                         2 => st.set_active_tab(InspectTab::Services),
-                        3 => st.set_active_tab(InspectTab::Settings),
-                        4 => st.set_active_tab(InspectTab::Info),
+                        3 => st.set_active_tab(InspectTab::Startup),
+                        4 => st.set_active_tab(InspectTab::Settings),
+                        5 => st.set_active_tab(InspectTab::Info),
                         _ => {}
                     }
                     needs_repaint = true;
@@ -2285,7 +2589,8 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
                     st.sort_asc = !st.sort_asc;
                 } else {
                     st.sort_col = col;
-                    st.sort_asc = col != 2; // CPU % default desc, altre default asc
+                    // CPU % in Processi parte decrescente; tutte le altre colonne partono crescenti.
+                    st.sort_asc = !(st.active_tab == InspectTab::Processes && col == 2);
                 }
                 st.apply_sorting();
                 st.apply_filter();
@@ -2469,6 +2774,10 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
                             needs_repaint = true;
                         }
                     }
+                    InspectTab::Startup => {
+                        st.toggle_selected_startup();
+                        needs_repaint = true;
+                    }
                     InspectTab::Info => {
                         crate::sys::shell::open_task_manager();
                     }
@@ -2480,6 +2789,9 @@ fn on_mouse_down(hwnd: HWND, x: i32, y: i32) {
             let b2 = &st.bottom_btn_rects[1];
             if (b2.left..b2.right).contains(&x) && (b2.top..b2.bottom).contains(&y) {
                 st.reload_data();
+                if st.active_tab == InspectTab::Startup {
+                    st.reload_startup();
+                }
                 let is_it = st.is_italian();
                 st.set_status(if is_it { "Dati aggiornati".to_string() } else { "Data refreshed".to_string() });
                 needs_repaint = true;
@@ -2544,6 +2856,7 @@ fn on_mouse_dblclk(hwnd: HWND, _x: i32, y: i32) {
             st.col_widths_procs = [220, 80, 80, 110, 110, 70];
             st.col_widths_sockets = [200, 70, 60, 180, 180];
             st.col_widths_services = [200, 280, 120, 100];
+            st.col_widths_startup = [230, 180, 115, 145];
             switched = true;
             return;
         }
@@ -2551,7 +2864,13 @@ fn on_mouse_dblclk(hwnd: HWND, _x: i32, y: i32) {
         if (table_top..table_bottom).contains(&y) {
             let clicked_idx = ((y - table_top + st.scroll_y) / row_h) as usize;
 
-            if st.active_tab == InspectTab::Processes {
+            if st.active_tab == InspectTab::Startup {
+                if clicked_idx < st.row_count() {
+                    st.set_selected_index(Some(clicked_idx));
+                    st.open_selected_startup_location();
+                    switched = true;
+                }
+            } else if st.active_tab == InspectTab::Processes {
                 let Some(item) = st.proc_items.get(clicked_idx).cloned() else { return };
                 match item {
                     ProcItem::Group { name, .. } => {
@@ -2645,6 +2964,8 @@ fn on_right_click(hwnd: HWND, x: i32, y: i32) {
     let mut is_processes = false;
     let mut is_sockets = false;
     let mut is_services = false;
+    let mut is_startup = false;
+    let mut startup_enabled = false;
     let mut is_it = false;
 
     STATE.with(|cell| {
@@ -2674,6 +2995,10 @@ fn on_right_click(hwnd: HWND, x: i32, y: i32) {
             is_processes = st.active_tab == InspectTab::Processes;
             is_sockets = st.active_tab == InspectTab::Sockets;
             is_services = st.active_tab == InspectTab::Services;
+            is_startup = st.active_tab == InspectTab::Startup;
+            if is_startup {
+                startup_enabled = st.selected_startup().is_some_and(|r| r.entry.state.is_enabled());
+            }
         }
     });
 
@@ -2698,6 +3023,10 @@ fn on_right_click(hwnd: HWND, x: i32, y: i32) {
     const IDM_SVC_START: usize = 2020;
     const IDM_SVC_STOP: usize = 2021;
     const IDM_SVC_COPY_NAME: usize = 2022;
+
+    const IDM_STARTUP_TOGGLE: usize = 2030;
+    const IDM_STARTUP_OPEN_LOC: usize = 2031;
+    const IDM_STARTUP_COPY_CMD: usize = 2032;
 
     unsafe {
         let hmenu = CreatePopupMenu();
@@ -2746,6 +3075,18 @@ fn on_right_click(hwnd: HWND, x: i32, y: i32) {
             append_item(IDM_SVC_STOP, if is_it { "⏹ Arresta servizio" } else { "⏹ Stop service" });
             append_sep();
             append_item(IDM_SVC_COPY_NAME, if is_it { "📋 Copia nome servizio" } else { "📋 Copy service name" });
+        } else if is_startup {
+            let toggle_lbl = if startup_enabled {
+                if is_it { "⏸ Disabilita all'avvio" } else { "⏸ Disable on startup" }
+            } else if is_it {
+                "▶ Abilita all'avvio"
+            } else {
+                "▶ Enable on startup"
+            };
+            append_item(IDM_STARTUP_TOGGLE, toggle_lbl);
+            append_sep();
+            append_item(IDM_STARTUP_OPEN_LOC, if is_it { "📁 Apri percorso file" } else { "📁 Open file location" });
+            append_item(IDM_STARTUP_COPY_CMD, if is_it { "📋 Copia comando" } else { "📋 Copy command" });
         }
 
         let mut pt = POINT { x, y };
@@ -2868,6 +3209,9 @@ fn on_right_click(hwnd: HWND, x: i32, y: i32) {
                         st.set_status(msg);
                     }
                 }
+                IDM_STARTUP_TOGGLE => st.toggle_selected_startup(),
+                IDM_STARTUP_OPEN_LOC => st.open_selected_startup_location(),
+                IDM_STARTUP_COPY_CMD => st.copy_selected_startup_command(hwnd),
                 _ => {}
             }
         });
@@ -2993,6 +3337,9 @@ fn on_key_down(hwnd: HWND, key: u32) {
             }
             VK_F5 => {
                 st.reload_data();
+                if st.active_tab == InspectTab::Startup {
+                    st.reload_startup();
+                }
                 let is_it = st.is_italian();
                 st.set_status(if is_it { "Aggiornato".to_string() } else { "Refreshed".to_string() });
                 repaint = true;
@@ -3002,10 +3349,11 @@ fn on_key_down(hwnd: HWND, key: u32) {
                 ShowWindow(hwnd, SW_HIDE);
             },
             VK_UP => {
+                let row_h = st.row_height();
                 if let Some(curr) = st.selected_index {
                     if curr > 0 {
                         st.set_selected_index(Some(curr - 1));
-                        let row_top = (curr - 1) as i32 * 24;
+                        let row_top = (curr - 1) as i32 * row_h;
                         if row_top < st.scroll_y {
                             st.scroll_y = row_top;
                         }
@@ -3020,12 +3368,13 @@ fn on_key_down(hwnd: HWND, key: u32) {
             }
             VK_DOWN => {
                 let max = st.row_count();
+                let row_h = st.row_height();
                 if let Some(curr) = st.selected_index {
                     if curr + 1 < max {
                         st.set_selected_index(Some(curr + 1));
                         let (_, h) = st.client_dimensions();
-                        let viewport_h = (h - 42 - 74).max(0);
-                        let row_bottom = (curr + 2) as i32 * 24;
+                        let viewport_h = (h - st.top_bar_height() - st.header_height() - st.bottom_bar_height()).max(0);
+                        let row_bottom = (curr + 2) as i32 * row_h;
                         if row_bottom > st.scroll_y + viewport_h {
                             st.scroll_y = row_bottom - viewport_h;
                         }
@@ -3046,7 +3395,7 @@ fn on_key_down(hwnd: HWND, key: u32) {
                     st.set_selected_index(Some(0));
                 }
                 let (_, h) = st.client_dimensions();
-                let viewport_h = (h - 42 - 74).max(0);
+                let viewport_h = (h - st.top_bar_height() - st.header_height() - st.bottom_bar_height()).max(0);
                 st.scroll_y = (st.scroll_y - viewport_h).max(0);
                 repaint = true;
             }
@@ -3059,7 +3408,7 @@ fn on_key_down(hwnd: HWND, key: u32) {
                     st.set_selected_index(Some(0));
                 }
                 let (_, h) = st.client_dimensions();
-                let viewport_h = (h - 42 - 74).max(0);
+                let viewport_h = (h - st.top_bar_height() - st.header_height() - st.bottom_bar_height()).max(0);
                 let max_s = st.max_scroll_y(h);
                 st.scroll_y = (st.scroll_y + viewport_h).min(max_s);
                 repaint = true;
@@ -3150,6 +3499,9 @@ fn on_key_down(hwnd: HWND, key: u32) {
                     st.update_socket_items();
                     st.restore_selection_index();
                     st.clamp_scroll();
+                    repaint = true;
+                } else if st.active_tab == InspectTab::Startup {
+                    st.toggle_selected_startup();
                     repaint = true;
                 }
             }
@@ -3273,14 +3625,15 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
         let tab_h = st.scale(28).max(24);
         let tab_y1 = (top_h - tab_h) / 2;
         let tab_y2 = tab_y1 + tab_h;
-        let tab_pad = st.scale(16);
-        let tab_gap = st.scale(6);
+        let tab_pad = st.scale(12);
+        let tab_gap = st.scale(4);
         let mut cur_tab_x = st.scale(14);
 
         let tabs = [
             (s.inspect_tab_processes, st.active_tab == InspectTab::Processes),
             (s.inspect_tab_sockets, st.active_tab == InspectTab::Sockets),
             (s.inspect_tab_services, st.active_tab == InspectTab::Services),
+            (s.inspect_tab_startup, st.active_tab == InspectTab::Startup),
             (s.inspect_tab_settings, st.active_tab == InspectTab::Settings),
             (s.inspect_tab_info, st.active_tab == InspectTab::Info),
         ];
@@ -3458,6 +3811,20 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                         (s.inspect_col_state, 2, false),
                         (s.inspect_col_pid, 3, true),
                         (s.inspect_col_name, 4, false),
+                    ];
+                    for (i, &(text, col_idx, align_right)) in cols.iter().enumerate() {
+                        if let Some(&(x1, x2)) = bounds.get(i) {
+                            draw_col(mem_dc, x1, x2, text, col_idx, align_right);
+                        }
+                    }
+                }
+                InspectTab::Startup => {
+                    let cols: [(&[u16], usize, bool); 5] = [
+                        (s.inspect_col_startup_name, 0, false),
+                        (s.inspect_col_publisher, 1, false),
+                        (s.inspect_col_state, 2, false),
+                        (s.inspect_col_source, 3, false),
+                        (s.inspect_col_command, 4, false),
                     ];
                     for (i, &(text, col_idx, align_right)) in cols.iter().enumerate() {
                         if let Some(&(x1, x2)) = bounds.get(i) {
@@ -3885,6 +4252,33 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                             draw_cell(mem_dc, bounds[4].0, bounds[4].1, &s.proc_name, false, Some(text_dim));
                         }
                     }
+                    InspectTab::Startup => {
+                        let row_opt = st.filtered_startup.get(idx).and_then(|&s_idx| st.startup_apps.get(s_idx));
+                        if let Some(r) = row_opt {
+                            let is_enabled = r.entry.state.is_enabled();
+                            let name_color = if is_enabled { None } else { Some(text_dim) };
+                            SelectObject(mem_dc, font_title);
+                            draw_cell(mem_dc, bounds[0].0, bounds[0].1, &r.entry.name, false, name_color);
+
+                            SelectObject(mem_dc, font_body);
+                            let pub_txt = if r.entry.publisher.is_empty() { "—" } else { &r.entry.publisher };
+                            draw_cell(mem_dc, bounds[1].0, bounds[1].1, pub_txt, false, Some(text_dim));
+
+                            let st_c = if r.entry.state.is_policy() {
+                                Some(text_yellow)
+                            } else if is_enabled {
+                                Some(text_cyan)
+                            } else {
+                                Some(text_dim)
+                            };
+                            draw_cell(mem_dc, bounds[2].0, bounds[2].1, &r.state_str, false, st_c);
+
+                            draw_cell(mem_dc, bounds[3].0, bounds[3].1, &r.source_str, false, Some(text_dim));
+
+                            SelectObject(mem_dc, font_mono);
+                            draw_cell(mem_dc, bounds[4].0, bounds[4].1, &r.entry.command, false, Some(text_dim));
+                        }
+                    }
                     InspectTab::Info | InspectTab::Settings => {}
                 }
             }
@@ -4036,6 +4430,20 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
                 st.bottom_btn_rects[0] = draw_btn(mem_dc, cur_btn_x, cur_btn_x + b1_w, btn_text, has_sel);
                 cur_btn_x += b1_w + btn_gap;
             }
+            InspectTab::Startup => {
+                let (btn_text, active) = match st.selected_startup() {
+                    Some(r) => {
+                        let txt = if r.entry.state.is_enabled() { s.inspect_btn_disable } else { s.inspect_btn_enable };
+                        (txt, !r.entry.state.is_policy())
+                    }
+                    None => (s.inspect_btn_disable, false),
+                };
+                let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
+                GetTextExtentPoint32W(mem_dc, btn_text.as_ptr(), btn_text.len().saturating_sub(1) as i32, &mut sz);
+                let b1_w = (sz.cx + st.scale(28)).max(st.scale(140));
+                st.bottom_btn_rects[0] = draw_btn(mem_dc, cur_btn_x, cur_btn_x + b1_w, btn_text, active);
+                cur_btn_x += b1_w + btn_gap;
+            }
             InspectTab::Info => {
                 let mut sz: windows_sys::Win32::Foundation::SIZE = zeroed();
                 GetTextExtentPoint32W(
@@ -4079,20 +4487,21 @@ unsafe fn paint_window(hwnd: HWND, hdc: HDC) {
         }
 
         // Testo di stato a destra
-        let (p_lbl, so_lbl, se_lbl) =
-            if is_it { ("Processi", "Socket", "Servizi") } else { ("Processes", "Sockets", "Services") };
-        let status_str = if let Some((msg, ts)) = &st.status_msg {
-            if ts.elapsed().as_secs() < 3 {
-                msg.clone()
+        let status_str = if let Some((msg, ts)) = &st.status_msg
+            && ts.elapsed().as_secs() < 3
+        {
+            msg.clone()
+        } else if st.active_tab == InspectTab::Startup {
+            let total = st.startup_apps.len();
+            let enabled_cnt = st.startup_apps.iter().filter(|r| r.entry.state.is_enabled()).count();
+            if is_it {
+                format!("App di avvio: {total}  |  Abilitate: {enabled_cnt}")
             } else {
-                format!(
-                    "{p_lbl}: {}  |  {so_lbl}: {}  |  {se_lbl}: {}",
-                    st.procs.len(),
-                    st.sockets.len(),
-                    st.services.len()
-                )
+                format!("Startup apps: {total}  |  Enabled: {enabled_cnt}")
             }
         } else {
+            let (p_lbl, so_lbl, se_lbl) =
+                if is_it { ("Processi", "Socket", "Servizi") } else { ("Processes", "Sockets", "Services") };
             format!(
                 "{p_lbl}: {}  |  {so_lbl}: {}  |  {se_lbl}: {}",
                 st.procs.len(),
@@ -5713,6 +6122,8 @@ mod tests {
             expanded_socket_groups: BTreeSet::new(),
             services: Vec::new(),
             filtered_services: Vec::new(),
+            startup_apps: Vec::new(),
+            filtered_startup: Vec::new(),
             hung_windows: Vec::new(),
             hung_kill_rect: None,
             proc_mem_history: BTreeMap::new(),
@@ -5731,9 +6142,10 @@ mod tests {
             col_widths_procs: [220, 80, 80, 110, 110, 70],
             col_widths_sockets: [200, 70, 60, 180, 180],
             col_widths_services: [200, 280, 120, 100],
+            col_widths_startup: [230, 180, 115, 145],
             hover_col_sep: None,
             resizing_col: None,
-            tab_rects: unsafe { [zeroed(); 5] },
+            tab_rects: unsafe { [zeroed(); 6] },
             group_btn_rect: unsafe { zeroed() },
             bottom_btn_rects: unsafe { [zeroed(); 3] },
             is_dragging_scrollbar: false,
@@ -5802,5 +6214,117 @@ mod tests {
         st.apply_filter();
         assert_eq!(st.selected_index, None);
         assert_eq!(st.selected_key, None);
+    }
+
+    #[test]
+    fn startup_tab_sorts_filters_and_tracks_selection() {
+        let mut st = InspectState {
+            hwnd: null_mut(),
+            search_edit: null_mut(),
+            engine: InspectEngine::new(),
+            active_tab: InspectTab::Startup,
+            procs: Vec::new(),
+            proc_items: Vec::new(),
+            group_procs: false,
+            expanded_groups: BTreeSet::new(),
+            sockets: Vec::new(),
+            socket_items: Vec::new(),
+            group_sockets: false,
+            expanded_socket_groups: BTreeSet::new(),
+            services: Vec::new(),
+            filtered_services: Vec::new(),
+            startup_apps: vec![
+                StartupRow {
+                    entry: StartupEntry {
+                        name: "Zebra App".into(),
+                        publisher: "Zebra Corp".into(),
+                        state: StartupState::Disabled,
+                        source: StartupSource::HkcuRun,
+                        command: r"C:\Zebra\zebra.exe".into(),
+                        target_path: None,
+                        raw_key: "Zebra".into(),
+                        requires_admin: false,
+                    },
+                    state_str: "○ Disabilitato".into(),
+                    source_str: "Registro (Utente)".into(),
+                },
+                StartupRow {
+                    entry: StartupEntry {
+                        name: "Alpha Tool".into(),
+                        publisher: "Alpha Inc".into(),
+                        state: StartupState::Enabled,
+                        source: StartupSource::StoreApp,
+                        command: r"C:\Program Files\WindowsApps\Alpha\alpha.exe".into(),
+                        target_path: None,
+                        raw_key: "Alpha_123\\Task".into(),
+                        requires_admin: false,
+                    },
+                    state_str: "● Abilitato".into(),
+                    source_str: "App Store (MSIX)".into(),
+                },
+            ],
+            filtered_startup: Vec::new(),
+            hung_windows: Vec::new(),
+            hung_kill_rect: None,
+            proc_mem_history: BTreeMap::new(),
+            filter_text: String::new(),
+            selected_index: None,
+            selected_key: None,
+            scroll_y: 0,
+            hover_row: None,
+            sort_col: 0,
+            sort_asc: true,
+            status_msg: None,
+            is_dark: true,
+            dpi: 96,
+            fonts: unsafe { InspectFonts::new(96) },
+            s: &crate::strings::IT,
+            col_widths_procs: [220, 80, 80, 110, 110, 70],
+            col_widths_sockets: [200, 70, 60, 180, 180],
+            col_widths_services: [200, 280, 120, 100],
+            col_widths_startup: [230, 180, 115, 145],
+            hover_col_sep: None,
+            resizing_col: None,
+            tab_rects: unsafe { [zeroed(); 6] },
+            group_btn_rect: unsafe { zeroed() },
+            bottom_btn_rects: unsafe { [zeroed(); 3] },
+            is_dragging_scrollbar: false,
+            scrollbar_drag_start_y: 0,
+            scrollbar_drag_start_scroll: 0,
+            last_mouse_x: 0,
+            last_mouse_y: 0,
+            info_author_rect: unsafe { zeroed() },
+            info_repo_rect: unsafe { zeroed() },
+            info_update_btn_rect: unsafe { zeroed() },
+            info_download_btn_rect: unsafe { zeroed() },
+            info_card2_author_rect: unsafe { zeroed() },
+            edit_brush_dark: null_mut(),
+            edit_brush_light: null_mut(),
+            icon_96: null_mut(),
+        };
+
+        st.apply_sorting();
+        st.apply_filter();
+        assert_eq!(st.row_count(), 2);
+        assert_eq!(st.startup_apps[st.filtered_startup[0]].entry.name, "Alpha Tool");
+
+        st.set_selected_index(Some(0));
+        assert_eq!(
+            st.selected_key,
+            Some(SelectedKey::StartupApp { source: StartupSource::StoreApp, raw_key: "Alpha_123\\Task".into() })
+        );
+
+        // Ordina per Nome decrescente: Zebra App (0), Alpha Tool (1)
+        st.sort_asc = false;
+        st.apply_sorting();
+        st.apply_filter();
+        assert_eq!(st.selected_index, Some(1));
+        assert_eq!(st.startup_apps[st.filtered_startup[1]].entry.name, "Alpha Tool");
+
+        // Filtra per "store": rimane solo Alpha Tool all'indice 0
+        st.filter_text = "store".into();
+        st.apply_filter();
+        assert_eq!(st.row_count(), 1);
+        assert_eq!(st.selected_index, Some(0));
     }
 }

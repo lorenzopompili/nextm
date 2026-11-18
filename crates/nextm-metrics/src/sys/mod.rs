@@ -11,6 +11,7 @@ pub mod processes;
 pub mod ram;
 pub mod services;
 pub mod sockets;
+pub mod startup;
 pub mod temp_acpi;
 pub mod temp_disk;
 pub mod temp_gpu;

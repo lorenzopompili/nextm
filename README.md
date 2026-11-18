@@ -33,7 +33,7 @@ On modern Windows, essential system diagnostic utilities have become bloated and
 
 **nextm was built to solve all of this in a single ~1 MB self-contained binary:**
 1. **Instantaneous:** Launches in under 95 milliseconds, idling at less than 3 MB of RAM and ~0.6% of a single core.
-2. **All-in-One Powerhouse:** Combines Process Management (hierarchical tree), Network Connections (TCP/UDP), Windows Services, System Telemetry, and Settings in a unified, flicker-free window.
+2. **All-in-One Powerhouse:** Combines Process Management (hierarchical tree), Network Connections (TCP/UDP), Windows Services, Startup Apps, System Telemetry, and Settings in a unified, flicker-free window.
 3. **Zero Ring-0 / Zero Kernel Drivers:** Reads CPU/ACPI thermal zones, GPU metrics (D3DKMT), and NVMe/SSD telemetry using official Windows/NT APIs without deploying third-party kernel drivers.
 4. **Zero External Runtime Dependencies:** Written in 100% pure Rust with direct Win32/NT system APIs and double-buffered GDI. No .NET, WebView2, Electron, or Visual C++ Redistributable required.
 5. **Native Bilingual Interface (English & Italian):** Automatically aligns with the Windows display language out of the box, with instant live switching available in Settings.
@@ -62,9 +62,9 @@ On modern Windows, essential system diagnostic utilities have become bloated and
 A single **left-click** or **double-click** on any nextm tray icon brings up the main inspection window, styled with Windows 11 DWM rounded corners, native dark/light mode, and zero flicker:
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│   [ Processes ]   [ Connections ]   [ Services ]   [ Settings ]   [ About ]            │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│   [ Processes ]   [ Connections ]   [ Services ]   [ Startup Apps ]   [ Settings ]   [ About ]          │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 #### 🔹 Processes Tab (Snappy Task Manager)
@@ -90,6 +90,11 @@ A single **left-click** or **double-click** on any nextm tray icon brings up the
 - Real-time service states (Running, Stopped, Paused, etc.).
 - One-click controls to **Start** or **Stop** any Windows service.
 
+#### 🔹 Startup Apps Tab
+- Scans all Windows 11 startup locations: `HKCU\Run`, `HKLM\Run` (64-bit & 32-bit WOW64 views), User and Common Startup folders (including pure-Rust MS-SHLLINK `.lnk` parsing), and Store / MSIX packaged startup tasks (`SystemAppData` + `AppxManifest.xml`).
+- Dynamically loads publisher/description metadata (`version.dll`, `shlwapi.dll` `SHLoadIndirectString`) and reads/writes Task Manager–compatible 12-byte `StartupApproved` states and MSIX `State` values while respecting Group Policy locks.
+- Instant filtering, 5-column sorting (*Name*, *Publisher*, *Source*, *Status*, *Command*), and actions via buttons, right-click menu, or keyboard (`Space` to **Enable / Disable**, double-click to **Open File Location**, or **Copy Command**).
+
 #### 🔹 Built-in Settings Tab
 Cleanly structured into customizable visual cards:
 1. **Metrics & Icons:** Toggle tray icons individually or in combination (CPU, RAM, Network, Disk I/O, ACPI, GPU Temp, GPU Usage %), select icon visual presentation (Numbers Only vs Icon + Number), choose network measurement units (Bytes/s vs Bits/s), and select interface language (**Auto OS**, **Italiano**, or **English**).
@@ -112,7 +117,7 @@ Cleanly structured into customizable visual cards:
 nextm is distributed in two formats:
 
 ### Option A: Modern Windows Installer (Recommended)
-Download `nextm-setup-v0.1.6.exe`:
+Download `nextm-setup-v0.1.7.exe`:
 - **Bilingual Setup:** Select between **English** and **Italiano** at launch.
 - **No UAC Required:** Installs cleanly to `%LOCALAPPDATA%\Programs\nextm`.
 - Creates Start Menu and optional Desktop shortcuts.
@@ -120,7 +125,7 @@ Download `nextm-setup-v0.1.6.exe`:
 - **100% Clean Uninstaller:** Integrated into *Windows Settings › Installed Apps*. Safely terminates running instances, deletes scheduled tasks, cleans application binaries, and purges all user registry keys (`HKCU\Software\nextm`).
 
 ### Option B: Self-Contained Portable Edition
-Download `nextm.exe` or `nextm-v0.1.6-windows-x64-portable.zip`:
+Download `nextm.exe` or `nextm-v0.1.7-windows-x64-portable.zip`:
 - A single, self-contained binary with zero installers and zero prerequisites.
 - Run `nextm.exe` from any directory, desktop, or USB thumb drive.
 - Create an empty **`nextm.ini`** file in the same folder to activate **Pure Portable Mode**: nextm will store all settings locally without writing to the Windows Registry.
@@ -147,7 +152,7 @@ Profiled using `cargo xtask bench` on Windows 11 with all telemetry modules acti
 
 | Metric | Result | Description |
 |---|---|---|
-| **Binary Size** | ~1 MB | Includes all 5 views, custom raster fonts, icons & telemetry engine |
+| **Binary Size** | ~1.25 MB | Includes all 6 views, custom raster fonts, icons & telemetry engine |
 | **Private Commit (RAM)** | ~2.9 MB | Full telemetry, process trees & socket correlation running |
 | **Private Working Set** | ~2.4 MB | Minimal physical RAM occupancy |
 | **CPU Usage** | ~0.6% | Single logical core at idle base frequency |
